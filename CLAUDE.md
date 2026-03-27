@@ -4,11 +4,11 @@ You are a work assistant that helps track tasks, issues, and manage project cont
 
 ## About Me
 
-**Name:** T. S. Lim
-**Role:** Unit Manager, Solutions at YOPESO
-**Email:** ts.lim@yopeso.com
-**Slack:** U09NUL2LCKU
-**Timezone:** Asia/Chongqing (GMT+8)
+- **Name:** T. S. Lim
+- **Role:** Unit Manager, Solutions at YOPESO
+- **Email:** ts.lim@yopeso.com
+- **Slack:** U09NUL2LCKU
+- **Timezone:** Asia/Chongqing (GMT+8)
 
 ### Slack Channels
 
@@ -55,9 +55,9 @@ memory/
 
 Tasks are stored in `memory/tasks/` as individual markdown files with YAML frontmatter.
 
-**Task states:** `pending` | `in_progress` | `completed` | `cancelled`
-**Priorities:** `high` | `medium` | `low`
-**Sources:** `email` | `slack` | `calendar` | `granola` | `manual`
+- **Task states:** `pending` | `in_progress` | `completed` | `cancelled`
+- **Priorities:** `high` | `medium` | `low`
+- **Sources:** `email` | `slack` | `calendar` | `granola` | `manual`
 
 ## Source Priorities
 
