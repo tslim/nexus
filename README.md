@@ -63,9 +63,40 @@ These are the core skills in `.claude/skills/`:
 - `python3` (for Granola CLI helper)
 - `gog` CLI for Gmail/Calendar:
   - `brew install gogcli`
-- Auth configured for each source:
-  - Google (`gog auth ...`)
-  - Slack user token (`SLACK_TOKEN`, usually starts with `xoxp-`)
+
+## Authentication Setup
+
+### Google (Gmail + Calendar via `gog`)
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/).
+2. Create/select a project.
+3. Enable APIs:
+   - Gmail API
+   - Google Calendar API
+4. Configure OAuth consent screen (External/Internal as needed).
+5. Create OAuth Client ID credentials (Desktop App is recommended for local CLI usage).
+6. Download the OAuth client JSON (for example: `~/Downloads/client_secret.json`).
+7. Configure `gog` with your credentials:
+   - `gog auth credentials ~/Downloads/client_secret.json`
+8. Add and authorize your Google account:
+   - `gog auth add you@gmail.com`
+9. Optionally set a default account:
+   - `gog auth manage`
+   - or `export GOG_ACCOUNT=you@gmail.com`
+
+### Slack (User Token for Slack Web API)
+
+1. Go to [Slack API Apps](https://api.slack.com/apps) and create/select an app.
+2. In **OAuth & Permissions**, add **User Token Scopes**:
+   - `channels:history`, `groups:history`, `im:history`, `mpim:history`
+   - `channels:read`, `groups:read`, `users:read`
+   - `chat:write`
+3. Install/Reinstall the app to workspace.
+4. Copy the **User OAuth Token** (starts with `xoxp-`).
+5. Export token in your shell:
+   - `export SLACK_TOKEN=xoxp-your-token`
+6. Verify Slack auth works:
+   - `node .claude/skills/read-slack/slack-cli.js test`
 
 ## Typical Workflow
 
