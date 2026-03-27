@@ -76,6 +76,22 @@ export GOG_ACCOUNT=you@gmail.com
 gog gmail search 'is:unread'
 ```
 
+### Read Thread Contents
+```bash
+# Get full thread with all messages
+gog gmail thread get <threadId>
+```
+
+### Download Attachments
+```bash
+# Download attachment from a message
+# First, get the attachment ID from the message:
+gog gmail thread get <threadId>
+
+# Then download:
+gog gmail attachment <messageId> <attachmentId> --output /path/to/file.pdf
+```
+
 ## Response Format
 
 When returning emails:
