@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gog calendar:*)",
+      "Bash(gog gmail:*)",
+      "Bash(gog:*)",
+      "Bash(*slack-cli.js*)",
+      "Bash(*granola-cli.py*)",
+      "Bash(node*slack-cli.js*)",
+      "Bash(python3*granola-cli.py*)"
+    ]
+  }
+}

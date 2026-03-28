@@ -5,7 +5,7 @@ It helps you capture and organize work across email, Slack, calendar, and meetin
 
 ## Important First Step
 
-Before using this repo, update your profile and channels in `CLAUDE.md`:
+Before using this repo, add your profile and channels in `CLAUDE.local.md`:
 
 - `## About Me`
 - `### Slack Channels`
