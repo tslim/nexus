@@ -3050,7 +3050,7 @@
         if (fieldEntries.length > 0) {
           html += `<div class="file-card" style="margin-bottom: 16px;"><table class="memory-flat-table"><tbody>`;
           for (const [key, value] of fieldEntries) {
-            html += `<tr data-search="${escapeHtml((key + ' ' + value).toLowerCase())}"><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`;
+            html += `<tr data-search="${escapeHtml((key + ' ' + value).toLowerCase())}"><td>${escapeHtml(key)}</td><td>${inlineMarkdownToHtml(value, dirName)}</td></tr>`;
           }
           html += `</tbody></table></div>`;
         }
@@ -3066,7 +3066,7 @@
             const searchData = row.join(' ').toLowerCase();
             html += `<tr data-search="${escapeHtml(searchData)}">`;
             for (const cell of row) {
-              html += `<td>${escapeHtml(cell)}</td>`;
+              html += `<td>${inlineMarkdownToHtml(cell, dirName)}</td>`;
             }
             html += `</tr>`;
           }
@@ -3080,9 +3080,13 @@
           if (lines.length === 0) continue;
           html += `<div class="file-card" style="margin-bottom: 16px;"><table class="memory-flat-table"><thead><tr><th colspan="2">${escapeHtml(sectionName)}</th></tr></thead><tbody>`;
           for (const line of lines) {
-            const cleanLine = line.replace(/^[-*]\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
-            if (!cleanLine) continue;
-            html += `<tr data-search="${escapeHtml((sectionName + ' ' + cleanLine).toLowerCase())}"><td colspan="2">${escapeHtml(cleanLine)}</td></tr>`;
+            const markdownLine = line.replace(/^[-*]\s*/, '').trim();
+            if (!markdownLine) continue;
+            const searchLine = markdownLine
+              .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 $2')
+              .replace(/[*_`]/g, '')
+              .trim();
+            html += `<tr data-search="${escapeHtml((sectionName + ' ' + searchLine).toLowerCase())}"><td colspan="2">${inlineMarkdownToHtml(markdownLine, dirName)}</td></tr>`;
           }
           html += `</tbody></table></div>`;
         }
