@@ -7,9 +7,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 - `memory/` as long-term structured memory
 - `dashboard.html` as a visual UI for tasks + memory
 
-## Updated Model (Current State)
-
-The system no longer assumes `CLAUDE.md` is manually maintained.
+## How It Works
 
 - `work-start` bootstraps and generates `CLAUDE.md` + `memory/` when missing.
 - `work-update` keeps tasks and memory current through interactive sync.
