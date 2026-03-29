@@ -46,7 +46,8 @@ When creating a new TASKS.md, use this exact template (without example tasks):
 
 Task format:
 - `- [ ] **Task title** - [Project](memory/projects/file.md) link, Note with [Person](memory/people/name.md) link _(added YYYY-MM-DD)_`
-- Sub-bullets for additional details
+- For executable subtasks, use checkbox sub-bullets: `  - [ ] Sub-step`
+- For non-action context, use plain sub-bullets: `  - Context note`
 - Completed: `- [x] ~~Task~~ (date)`
 
 ## How to Interact
@@ -77,7 +78,8 @@ Task format:
 - Include "for [person]" when it's a commitment to someone
 - Include "due [date]" for deadlines
 - Include "since [date]" for waiting items
-- Sub-bullets for additional context
+- Prefer checkbox sub-steps when work can be completed independently and tracked
+- Use plain sub-bullets only for references, constraints, or notes
 - Keep Done section for ~1 week, then clear old items
 
 ## Extracting Tasks
