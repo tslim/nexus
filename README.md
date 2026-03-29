@@ -30,6 +30,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 |---|---|
 | `read-email` | Reads/searches Gmail via `gog`. |
 | `read-calendar` | Reads Google Calendar via `gog`. |
+| `read-google-drive` | Reads/searches Google Drive folders and files via `gog`. |
 | `read-slack` | Uses `.claude/skills/read-slack/slack-cli.js` with `@slack/web-api`. |
 | `read-granola` | Uses `.claude/skills/read-granola/granola-cli.py` for local meeting notes/transcripts. |
 
@@ -46,6 +47,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 │       ├── memory-management/
 │       ├── read-email/
 │       ├── read-calendar/
+│       ├── read-google-drive/
 │       ├── read-slack/
 │       └── read-granola/
 ├── TASKS.md         # generated/maintained by workflow
@@ -77,13 +79,14 @@ This repository provides a skill-driven work assistant for Claude Code with:
 
 ## Authentication Setup
 
-### Google (Gmail + Calendar via `gog`)
+### Google (Gmail + Calendar + Drive via `gog`)
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/).
 2. Create/select a project.
 3. Enable these APIs:
    - Gmail API
    - Google Calendar API
+   - Google Drive API
 4. Configure OAuth consent screen.
 5. Create OAuth Client credentials (Desktop App recommended).
 6. Download OAuth client JSON (example: `~/Downloads/client_secret.json`).
