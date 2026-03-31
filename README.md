@@ -21,6 +21,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 |---|---|
 | `work-start` | First-run initializer: checks/creates `TASKS.md`, ensures dashboard setup, and bootstraps memory (`CLAUDE.md` + `memory/`). |
 | `work-update` | Main ongoing sync flow for tasks + memory gaps, stale task triage, and context enrichment. |
+| `daily-sync` | Collects your 3 standup answers and posts them to the current team daily thread in Slack. |
 | `task-management` | Task conventions for `TASKS.md` (active, waiting, someday, done) and task update behavior. |
 | `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base. |
 
@@ -43,6 +44,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 │       ├── dashboard.html
 │       ├── work-start/
 │       ├── work-update/
+│       ├── daily-sync/
 │       ├── task-management/
 │       ├── memory-management/
 │       ├── read-email/
@@ -66,6 +68,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 2. Run `/work-start`.
 3. Open `dashboard.html` from your file browser.
 4. Use `/work-update` regularly to keep tasks and memory fresh.
+5. Use `/daily-sync` to post your standup update to the right Slack thread.
 
 ## Prerequisites
 
