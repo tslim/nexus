@@ -1,5 +1,5 @@
 ---
-name: read-calendar
+name: google-calendar
 description: Read events and schedule from Google Calendar using gog (gogcli.sh)
 tools: [Bash]
 ---

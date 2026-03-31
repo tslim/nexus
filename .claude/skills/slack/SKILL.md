@@ -1,5 +1,5 @@
 ---
-name: read-slack
+name: slack
 description: Read and send Slack messages using @slack/web-api
 tools: [Bash]
 ---
@@ -11,7 +11,7 @@ You are a Slack assistant. Use the `@slack/web-api` Node.js package to interact 
 Use the `slack-cli.js` script in this skill directory:
 
 ```bash
-node .claude/skills/read-slack/slack-cli.js <command> [args]
+node .claude/skills/slack/slack-cli.js <command> [args]
 ```
 
 ### Commands

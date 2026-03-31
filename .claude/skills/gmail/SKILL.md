@@ -1,6 +1,6 @@
 ---
-name: read-email
-description: Read and search emails from Gmail using gog (gogcli.sh)
+name: gmail
+description: Read and search Gmail using gog (gogcli.sh)
 tools: [Bash]
 ---
 

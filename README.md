@@ -29,11 +29,12 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 
 | Skill | Purpose |
 |---|---|
-| `read-email` | Reads/searches Gmail via `gog`. |
-| `read-calendar` | Reads Google Calendar via `gog`. |
-| `read-google-drive` | Reads/searches Google Drive folders and files via `gog`. |
-| `read-slack` | Uses `.claude/skills/read-slack/slack-cli.js` with `@slack/web-api`. |
-| `read-granola` | Uses `.claude/skills/read-granola/granola-cli.py` for local meeting notes/transcripts. |
+| `gmail` | Reads/searches Gmail via `gog`. |
+| `google-calendar` | Reads Google Calendar via `gog`. |
+| `google-drive` | Reads/searches Google Drive folders and files via `gog`. |
+| `slack` | Uses `.claude/skills/slack/slack-cli.js` with `@slack/web-api`. |
+| `granola` | Uses `.claude/skills/granola/granola-cli.py` for local meeting notes/transcripts. |
+| `notebooklm-enterprise` | Manages NotebookLM Enterprise notebooks, sources, sharing, and audio overviews via official Google Cloud APIs. |
 
 ## Repository Structure
 
@@ -47,11 +48,11 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 │       ├── daily-sync/
 │       ├── task-management/
 │       ├── memory-management/
-│       ├── read-email/
-│       ├── read-calendar/
-│       ├── read-google-drive/
-│       ├── read-slack/
-│       └── read-granola/
+│       ├── gmail/
+│       ├── google-calendar/
+│       ├── google-drive/
+│       ├── slack/
+│       └── granola/
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
 ├── dashboard.html   # copied to root for browser use
@@ -113,7 +114,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 5. Export token:
    - `export SLACK_TOKEN=xoxp-your-token`
 6. Verify:
-   - `node .claude/skills/read-slack/slack-cli.js test`
+   - `node .claude/skills/slack/slack-cli.js test`
 
 ## Operating Notes
 

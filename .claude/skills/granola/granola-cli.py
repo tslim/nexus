@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+
 def get_cache_file():
     """Find the latest Granola cache file."""
     cache_dir = Path.home() / "Library/Application Support/Granola"
@@ -20,56 +21,61 @@ def get_cache_file():
 
     return cache_files[0]
 
+
 def load_cache():
     """Load and return the Granola cache data."""
     cache_file = get_cache_file()
-    with open(cache_file, 'r') as f:
+    with open(cache_file, "r") as f:
         return json.load(f)
+
 
 def list_meetings(limit=None):
     """List all meeting notes."""
     data = load_cache()
-    docs = data['cache']['state']['documents']
+    docs = data["cache"]["state"]["documents"]
 
-    meetings = sorted(docs.items(), key=lambda x: x[1]['created_at'], reverse=True)
+    meetings = sorted(docs.items(), key=lambda x: x[1]["created_at"], reverse=True)
     if limit:
         meetings = meetings[:limit]
 
     for doc_id, doc in meetings:
-        title = doc.get('title', 'Untitled')
-        date = doc['created_at'][:10]
+        title = doc.get("title", "Untitled")
+        date = doc["created_at"][:10]
         print(f"{date} | {title} | {doc_id}")
+
 
 def recent_meetings(days=7):
     """List meetings from last N days."""
     data = load_cache()
-    docs = data['cache']['state']['documents']
+    docs = data["cache"]["state"]["documents"]
 
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-    recent = [(d['created_at'], d) for d in docs.values() if d['created_at'] > cutoff]
+    recent = [(d["created_at"], d) for d in docs.values() if d["created_at"] > cutoff]
 
     for date, doc in sorted(recent, reverse=True):
         print(f"{date[:10]} | {doc.get('title', 'Untitled')}")
 
+
 def search_titles(query):
     """Search meeting titles."""
     data = load_cache()
-    docs = data['cache']['state']['documents']
+    docs = data["cache"]["state"]["documents"]
 
     query_lower = query.lower()
     for doc_id, doc in docs.items():
-        title = doc.get('title', '').lower()
+        title = doc.get("title", "").lower()
         if query_lower in title:
             print(f"{doc['created_at'][:10]} | {doc.get('title', 'Untitled')}")
+
 
 def search_notes(query):
     """Search within note content."""
     data = load_cache()
-    docs = data['cache']['state']['documents']
+    docs = data["cache"]["state"]["documents"]
 
     query_lower = query.lower()
     for doc_id, doc in docs.items():
-        content = (doc.get('notes_plain', '') or doc.get('notes_markdown', '')).lower()
+        content = (doc.get("notes_plain", "") or doc.get("notes_markdown", "")).lower()
         if query_lower in content:
             print(f"{doc['created_at'][:10]} | {doc.get('title', 'Untitled')}")
             idx = content.find(query_lower)
@@ -78,11 +84,12 @@ def search_notes(query):
             print(f"  ...{content[start:end]}...")
             print()
 
+
 def get_meeting(doc_id):
     """Get meeting details by ID."""
     data = load_cache()
-    state = data['cache']['state']
-    doc = state['documents'].get(doc_id)
+    state = data["cache"]["state"]
+    doc = state["documents"].get(doc_id)
 
     if not doc:
         print(f"Error: Meeting {doc_id} not found")
@@ -92,22 +99,23 @@ def get_meeting(doc_id):
     print(f"Created: {doc['created_at']}")
     print(f"Updated: {doc['updated_at']}")
 
-    if doc.get('google_calendar_event'):
-        evt = doc['google_calendar_event']
+    if doc.get("google_calendar_event"):
+        evt = doc["google_calendar_event"]
         print(f"Start: {evt.get('start', {}).get('dateTime')}")
         print(f"End: {evt.get('end', {}).get('dateTime')}")
-        attendees = [a.get('email', '') for a in evt.get('attendees', [])]
+        attendees = [a.get("email", "") for a in evt.get("attendees", [])]
         if attendees:
             print(f"Attendees: {', '.join(attendees)}")
 
     print(f"\nNotes:")
-    notes = doc.get('notes_plain') or doc.get('notes_markdown') or 'No notes'
+    notes = doc.get("notes_plain") or doc.get("notes_markdown") or "No notes"
     print(notes)
+
 
 def get_transcript(doc_id):
     """Get transcript for a meeting."""
     data = load_cache()
-    transcripts = data['cache']['state']['transcripts']
+    transcripts = data["cache"]["state"]["transcripts"]
     segments = transcripts.get(doc_id, [])
 
     if not segments:
@@ -115,23 +123,25 @@ def get_transcript(doc_id):
         return
 
     for seg in segments:
-        time = seg['start_timestamp'][11:19]  # Extract HH:MM:SS
+        time = seg["start_timestamp"][11:19]  # Extract HH:MM:SS
         print(f"[{time}] {seg['text']}")
+
 
 def show_cache_info():
     """Show cache file location and stats."""
     cache_file = get_cache_file()
     data = load_cache()
 
-    docs = data['cache']['state']['documents']
-    transcripts = data['cache']['state']['transcripts']
+    docs = data["cache"]["state"]["documents"]
+    transcripts = data["cache"]["state"]["transcripts"]
 
     print(f"Cache file: {cache_file}")
     print(f"Total meetings: {len(docs)}")
     print(f"Total transcripts: {len(transcripts)}")
 
+
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] == 'help':
+    if len(sys.argv) < 2 or sys.argv[1] == "help":
         print("""Usage: granola-cli <command> [args]
 
 Commands:
@@ -156,33 +166,33 @@ Examples:
     args = sys.argv[2:]
 
     try:
-        if cmd == 'list':
+        if cmd == "list":
             limit = int(args[0]) if args else None
             list_meetings(limit)
-        elif cmd == 'recent':
+        elif cmd == "recent":
             days = int(args[0]) if args else 7
             recent_meetings(days)
-        elif cmd == 'search-title':
+        elif cmd == "search-title":
             if not args:
                 print("Error: Query required")
                 sys.exit(1)
-            search_titles(' '.join(args))
-        elif cmd == 'search-notes':
+            search_titles(" ".join(args))
+        elif cmd == "search-notes":
             if not args:
                 print("Error: Query required")
                 sys.exit(1)
-            search_notes(' '.join(args))
-        elif cmd == 'get':
+            search_notes(" ".join(args))
+        elif cmd == "get":
             if not args:
                 print("Error: Document ID required")
                 sys.exit(1)
             get_meeting(args[0])
-        elif cmd == 'transcript':
+        elif cmd == "transcript":
             if not args:
                 print("Error: Document ID required")
                 sys.exit(1)
             get_transcript(args[0])
-        elif cmd == 'info':
+        elif cmd == "info":
             show_cache_info()
         else:
             print(f"Unknown command: {cmd}")
@@ -191,5 +201,6 @@ Examples:
         print(f"Error: {e}")
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

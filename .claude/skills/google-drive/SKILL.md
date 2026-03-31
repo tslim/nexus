@@ -1,5 +1,5 @@
 ---
-name: read-google-drive
+name: google-drive
 description: Read and search Google Drive files and folders using gog (gogcli.sh)
 tools: [Bash]
 ---

@@ -1,5 +1,5 @@
 ---
-name: read-granola
+name: granola
 description: Read meeting notes and transcripts from Granola's local cache
 tools: [Bash, Read]
 ---
@@ -11,7 +11,7 @@ You are a meeting notes assistant. Help the user read and search their Granola m
 Use the `granola-cli.py` script in this skill directory:
 
 ```bash
-python3 .claude/skills/read-granola/granola-cli.py <command> [args]
+python3 .claude/skills/granola/granola-cli.py <command> [args]
 ```
 
 ### Commands

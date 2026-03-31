@@ -50,15 +50,15 @@ Rules:
 
 ## Thread Selection ("correct thread")
 
-Use the Slack CLI from `read-slack` skill:
+Use the Slack CLI from `slack` skill:
 
 1. Get recent parent-thread candidates:
 ```bash
-node .claude/skills/read-slack/slack-cli.js threads <DAILY_SYNC_CHANNEL_ID> --days 2 --limit 50 --json
+node .claude/skills/slack/slack-cli.js threads <DAILY_SYNC_CHANNEL_ID> --days 2 --limit 50 --json
 ```
 2. Optionally validate recent reply style from your prior updates:
 ```bash
-node .claude/skills/read-slack/slack-cli.js thread-scan <DAILY_SYNC_CHANNEL_ID> --parent-pattern "daily standup" --reply-user <YOUR_SLACK_USER_ID> --reply-pattern ":white_check_mark:|:hammer:|:construction:" --days 14 --json
+node .claude/skills/slack/slack-cli.js thread-scan <DAILY_SYNC_CHANNEL_ID> --parent-pattern "daily standup" --reply-user <YOUR_SLACK_USER_ID> --reply-pattern ":white_check_mark:|:hammer:|:construction:" --days 14 --json
 ```
 3. Choose the best match in this order:
    - Text matches `daily sync`, `standup`, or `daily update`
@@ -85,7 +85,7 @@ Post this structure as one threaded reply:
 Then send using:
 
 ```bash
-node .claude/skills/read-slack/slack-cli.js send <DAILY_SYNC_CHANNEL_ID> "<formatted message>" --thread-ts <thread_ts>
+node .claude/skills/slack/slack-cli.js send <DAILY_SYNC_CHANNEL_ID> "<formatted message>" --thread-ts <thread_ts>
 ```
 
 ## Response Back to User
