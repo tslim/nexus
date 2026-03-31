@@ -1,6 +1,6 @@
-# Work Assistant (Claude Code + Skills)
+# Work Assistant 
 
-This repository provides a skill-driven work assistant for Claude Code with:
+This repository provides a skill-driven work assistant for Claude Code / Opencode with:
 
 - `TASKS.md` as the shared task board
 - `CLAUDE.md` as generated working memory (hot cache)
@@ -72,7 +72,7 @@ This repository provides a skill-driven work assistant for Claude Code with:
 
 ## Prerequisites
 
-- Claude Code / Cursor
+- Claude Code / Opencode
 - `node`
 - `python3`
 - `gog` CLI:
