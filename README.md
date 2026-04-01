@@ -36,7 +36,6 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 | `slack` | Uses `.claude/skills/slack/slack-cli.js` with `@slack/web-api`. |
 | `granola` | Uses `.claude/skills/granola/granola-cli.py` for local meeting notes/transcripts. |
 | `notebooklm` | Uses `notebooklm-py` to manage NotebookLM notebooks, sources, chats, and generated artifacts. |
-| `notebooklm-enterprise` | Manages NotebookLM Enterprise notebooks, sources, sharing, and audio overviews via official Google Cloud APIs. |
 
 ## Repository Structure
 
@@ -54,7 +53,8 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 │       ├── google-calendar/
 │       ├── google-drive/
 │       ├── slack/
-│       └── granola/
+│       ├── granola/
+│       └── notebooklm/
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
 ├── package.json     # Node dependencies for local skill tooling
