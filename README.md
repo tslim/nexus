@@ -35,6 +35,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 | `google-drive` | Reads/searches Google Drive folders and files via `gog`. |
 | `slack` | Uses `.claude/skills/slack/slack-cli.js` with `@slack/web-api`. |
 | `granola` | Uses `.claude/skills/granola/granola-cli.py` for local meeting notes/transcripts. |
+| `notebooklm` | Uses `notebooklm-py` to manage NotebookLM notebooks, sources, chats, and generated artifacts. |
 | `notebooklm-enterprise` | Manages NotebookLM Enterprise notebooks, sources, sharing, and audio overviews via official Google Cloud APIs. |
 
 ## Repository Structure
@@ -83,6 +84,11 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
   - `npm install`
 - `gog` CLI:
   - `brew install gogcli`
+- `notebooklm` CLI:
+  - `uv venv`
+  - `uv pip install --python .venv/bin/python "notebooklm-py[browser]"`
+  - `uv run playwright install chromium`
+  - `source .venv/bin/activate`
 
 ## Authentication Setup
 
@@ -118,8 +124,26 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
    - `SLACK_TOKEN=xoxp-your-token`
 6. Verify:
    - `node .claude/skills/slack/slack-cli.js test`
+   - 
+### NotebookLM (via notebooklm-py)
 
-### Memory backup (`memory-backup`)
+1. Install the CLI:
+   - `uv venv`
+   - `uv pip install --python .venv/bin/python "notebooklm-py[browser]"`
+   - `uv run playwright install chromium`
+   - `source .venv/bin/activate`
+2. Authenticate with Google:
+   - `notebooklm login`
+3. Verify the setup:
+   - `notebooklm status`
+   - `notebooklm list --json`
+4. If auth expires or verification fails:
+   - `notebooklm auth check`
+   - `notebooklm login`
+
+For parallel workflows, prefer explicit notebook IDs (`-n <id>` or `--notebook <id>`) instead of relying on `notebooklm use`.
+
+## Memory backup
 
 1. Clone your private backup repository somewhere outside this workspace.
 2. Ensure the clone already exists, is a Git repo, and has push access configured.

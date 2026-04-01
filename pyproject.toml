@@ -1,0 +1,9 @@
+[project]
+name = "nexus"
+version = "0.1.0"
+description = "AI Work Assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "notebooklm-py[browser]>=0.3.4",
+]
