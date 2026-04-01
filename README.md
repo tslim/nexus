@@ -124,7 +124,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
    - `SLACK_TOKEN=xoxp-your-token`
 6. Verify:
    - `node .claude/skills/slack/slack-cli.js test`
-   - 
+
 ### NotebookLM (via notebooklm-py)
 
 1. Install the CLI:
