@@ -24,6 +24,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 | `daily-sync` | Collects your 3 standup answers and posts them to the current team daily thread in Slack. |
 | `task-management` | Task conventions for `TASKS.md` (active, waiting, someday, done) and task update behavior. |
 | `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base. |
+| `memory-backup` | Backs up `CLAUDE.md`, `TASKS.md`, and `memory/` to a separate private Git repo clone. |
 
 ### External source readers
 
@@ -55,6 +56,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 │       └── granola/
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
+├── package.json     # Node dependencies for local skill tooling
 ├── dashboard.html   # copied to root for browser use
 └── memory/
     ├── glossary.md
@@ -65,21 +67,22 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 
 ## Quick Start
 
-1. Install dependencies and configure authentication.
+1. Install dependencies with `npm install`, then configure authentication.
 2. Run `/work-start`.
 3. Open `dashboard.html` from your file browser.
 4. Use `/work-update` regularly to keep tasks and memory fresh.
 5. Use `/daily-sync` to post your standup update to the right Slack thread.
+6. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
 
 ## Prerequisites
 
 - Claude Code / Opencode
 - `node`
 - `python3`
+- Node dependencies:
+  - `npm install`
 - `gog` CLI:
   - `brew install gogcli`
-- Slack Web API dependency:
-  - `npm install @slack/web-api`
 
 ## Authentication Setup
 
@@ -115,6 +118,18 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
    - `SLACK_TOKEN=xoxp-your-token`
 6. Verify:
    - `node .claude/skills/slack/slack-cli.js test`
+
+### Memory backup (`memory-backup`)
+
+1. Clone your private backup repository somewhere outside this workspace.
+2. Ensure the clone already exists, is a Git repo, and has push access configured.
+3. Add `MEMORY_BACKUP_DIR` to your workspace `.env` file:
+   - `MEMORY_BACKUP_DIR=/your/path/to/private-backup-repo`
+4. Run the skill:
+   - `/memory-backup`
+   - or `/memory-backup --dry-run`
+
+`MEMORY_BACKUP_DIR` must point to a clean local clone of a separate private Git repo.
 
 ## Operating Notes
 
