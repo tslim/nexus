@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
-const { WebClient } = require('@slack/web-api');
-const fs = require('fs');
-const path = require('path');
+const { WebClient } = require("@slack/web-api");
+const fs = require("fs");
+const path = require("path");
+
+process.loadEnvFile();
 
 const token = process.env.SLACK_TOKEN;
 if (!token) {
-  console.error('Error: SLACK_TOKEN environment variable is required');
+  console.error("Error: SLACK_TOKEN environment variable is required");
   process.exit(1);
 }
 
@@ -18,12 +20,12 @@ function parseArgs(argv) {
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (!arg.startsWith('--')) {
+    if (!arg.startsWith("--")) {
       positional.push(arg);
       continue;
     }
 
-    const eq = arg.indexOf('=');
+    const eq = arg.indexOf("=");
     if (eq !== -1) {
       const key = arg.slice(2, eq);
       const value = arg.slice(eq + 1);
@@ -33,7 +35,7 @@ function parseArgs(argv) {
 
     const key = arg.slice(2);
     const next = argv[i + 1];
-    if (next && !next.startsWith('--')) {
+    if (next && !next.startsWith("--")) {
       flags[key] = next;
       i += 1;
     } else {
@@ -60,7 +62,7 @@ function tsToLocal(ts) {
 }
 
 function compactText(text, maxLen = 220) {
-  const normalized = (text || '').replace(/\n/g, ' ').trim();
+  const normalized = (text || "").replace(/\n/g, " ").trim();
   if (normalized.length <= maxLen) return normalized;
   return `${normalized.slice(0, maxLen)}...`;
 }
@@ -89,15 +91,16 @@ async function fetchHistory(channel, opts = {}) {
       cursor: cursor || undefined,
       oldest: oldest || undefined,
       latest: latest || undefined,
-      inclusive
+      inclusive,
     });
 
     const messages = resp.messages || [];
     out.push(...messages);
 
-    cursor = resp.response_metadata && resp.response_metadata.next_cursor
-      ? resp.response_metadata.next_cursor
-      : null;
+    cursor =
+      resp.response_metadata && resp.response_metadata.next_cursor
+        ? resp.response_metadata.next_cursor
+        : null;
 
     done = !cursor || messages.length === 0;
   }
@@ -118,7 +121,7 @@ async function resolveUsers(userIds) {
       display_name: u.profile.display_name || null,
       real_name: u.real_name || null,
       email: u.profile.email || null,
-      title: u.profile.title || null
+      title: u.profile.title || null,
     });
   }
 
@@ -138,7 +141,7 @@ async function resolveChannels(channelIds) {
       is_private: !!c.is_private,
       is_im: !!c.is_im,
       is_mpim: !!c.is_mpim,
-      member_count: c.num_members != null ? c.num_members : null
+      member_count: c.num_members != null ? c.num_members : null,
     });
   }
 
@@ -152,17 +155,21 @@ function messagesToRows(channelId, messages) {
     time: tsToLocal(m.ts),
     user_id: m.user || null,
     bot_id: m.bot_id || null,
-    text: m.text || '',
+    text: m.text || "",
     thread_ts: m.thread_ts || null,
     reply_count: m.reply_count || 0,
     has_files: !!(m.files && m.files.length),
-    files: (m.files || []).map((f) => ({ id: f.id, name: f.name, size: f.size }))
+    files: (m.files || []).map((f) => ({
+      id: f.id,
+      name: f.name,
+      size: f.size,
+    })),
   }));
 }
 
 function printHumanMessages(rows, showChannel = false) {
   rows.forEach((row) => {
-    const prefix = showChannel ? `[${row.channel_id}] ` : '';
+    const prefix = showChannel ? `[${row.channel_id}] ` : "";
     console.log(`${prefix}[${row.time}] ${compactText(row.text, 260)}`);
     if (row.reply_count) {
       console.log(`  replies=${row.reply_count}`);
@@ -171,23 +178,31 @@ function printHumanMessages(rows, showChannel = false) {
 }
 
 const extractPatterns = {
-  blockers: /\b(blocker|blocked|blocking|stuck|waiting on|can't|cannot|issue|dependency)\b/i,
+  blockers:
+    /\b(blocker|blocked|blocking|stuck|waiting on|can't|cannot|issue|dependency)\b/i,
   tasks: /\b(i'll|i will|need to|todo|action item|follow up|please\s+\w+)\b/i,
   decisions: /\b(decided|decision|agreed|approved|we will)\b/i,
-  risks: /\b(risk|concern|at risk|problem|failure|uncertain)\b/i
+  risks: /\b(risk|concern|at risk|problem|failure|uncertain)\b/i,
 };
 
 const commands = {
   async channels() {
     const result = await web.conversations.list({
-      types: 'public_channel,private_channel,mpim,im',
-      limit: 200
+      types: "public_channel,private_channel,mpim,im",
+      limit: 200,
     });
 
     result.channels.forEach((c) => {
-      const type = c.is_mpim ? 'group-dm' : c.is_im ? 'dm' : c.is_private ? 'private' : 'public';
-      const name = c.name || c.name_normalized || (c.user ? `DM:${c.user}` : 'unnamed');
-      const members = c.num_members != null ? c.num_members : '-';
+      const type = c.is_mpim
+        ? "group-dm"
+        : c.is_im
+          ? "dm"
+          : c.is_private
+            ? "private"
+            : "public";
+      const name =
+        c.name || c.name_normalized || (c.user ? `DM:${c.user}` : "unnamed");
+      const members = c.num_members != null ? c.num_members : "-";
       console.log(`${name} | ${c.id} | ${type} | ${members} members`);
     });
   },
@@ -195,7 +210,7 @@ const commands = {
   async history(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
     const daysOldest = flags.days ? toEpochDaysAgo(flags.days) : null;
     const messages = await fetchHistory(channelId, {
@@ -203,12 +218,15 @@ const commands = {
       oldest: flags.oldest || daysOldest,
       latest: flags.latest,
       cursor: flags.cursor,
-      inclusive: flags.inclusive === true
+      inclusive: flags.inclusive === true,
     });
 
     const rows = messagesToRows(channelId, messages);
     if (flags.json) {
-      printResult({ channel_id: channelId, count: rows.length, messages: rows }, true);
+      printResult(
+        { channel_id: channelId, count: rows.length, messages: rows },
+        true,
+      );
       return;
     }
 
@@ -217,37 +235,56 @@ const commands = {
 
   async search(args) {
     const { positional, flags } = parseArgs(args);
-    const query = positional.join(' ').trim();
-    if (!query) throw new Error('Search query required');
+    const query = positional.join(" ").trim();
+    if (!query) throw new Error("Search query required");
 
     const asJson = !!flags.json;
     const limit = toInt(flags.limit, 50);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : null;
 
     if (flags.channels) {
-      const channelIds = flags.channels.split(',').map((s) => s.trim()).filter(Boolean);
+      const channelIds = flags.channels
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       const needle = query.toLowerCase();
       const rows = [];
 
       for (const channelId of channelIds) {
         const messages = await fetchHistory(channelId, { limit, oldest });
         const matches = messages
-          .filter((m) => (m.text || '').toLowerCase().includes(needle))
-          .map((m) => ({ channel_id: channelId, ...messagesToRows(channelId, [m])[0] }));
+          .filter((m) => (m.text || "").toLowerCase().includes(needle))
+          .map((m) => ({
+            channel_id: channelId,
+            ...messagesToRows(channelId, [m])[0],
+          }));
         rows.push(...matches);
       }
 
       if (asJson) {
-        printResult({ mode: 'local', query, count: rows.length, messages: rows }, true);
+        printResult(
+          { mode: "local", query, count: rows.length, messages: rows },
+          true,
+        );
       } else {
         printHumanMessages(rows, true);
       }
       return;
     }
 
-    const slackQuery = oldest ? `${query} after:${new Date(parseInt(oldest, 10) * 1000).toISOString().slice(0, 10)}` : query;
-    const resp = await web.search.messages({ query: slackQuery, count: Math.min(limit, 100), sort: 'timestamp', sort_dir: 'desc' });
-    const matches = ((resp.messages && resp.messages.matches) || []).slice(0, limit);
+    const slackQuery = oldest
+      ? `${query} after:${new Date(parseInt(oldest, 10) * 1000).toISOString().slice(0, 10)}`
+      : query;
+    const resp = await web.search.messages({
+      query: slackQuery,
+      count: Math.min(limit, 100),
+      sort: "timestamp",
+      sort_dir: "desc",
+    });
+    const matches = ((resp.messages && resp.messages.matches) || []).slice(
+      0,
+      limit,
+    );
 
     const rows = matches.map((m) => ({
       channel_id: m.channel && m.channel.id,
@@ -255,17 +292,27 @@ const commands = {
       ts: m.ts,
       time: tsToLocal(m.ts),
       user_id: m.user,
-      text: m.text || '',
+      text: m.text || "",
       permalink: m.permalink || null,
       thread_ts: m.thread_ts || null,
-      reply_count: m.reply_count || 0
+      reply_count: m.reply_count || 0,
     }));
 
     if (asJson) {
-      printResult({ mode: 'search_api', query: slackQuery, count: rows.length, messages: rows }, true);
+      printResult(
+        {
+          mode: "search_api",
+          query: slackQuery,
+          count: rows.length,
+          messages: rows,
+        },
+        true,
+      );
     } else {
       rows.forEach((row) => {
-        console.log(`[${row.channel_name || row.channel_id}] [${row.time}] ${compactText(row.text, 220)}`);
+        console.log(
+          `[${row.channel_name || row.channel_id}] [${row.time}] ${compactText(row.text, 220)}`,
+        );
         if (row.permalink) console.log(`  ${row.permalink}`);
       });
     }
@@ -274,19 +321,36 @@ const commands = {
   async messagesFilter(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
-    const patternInput = flags.pattern || positional.slice(1).join(' ');
-    if (!patternInput) throw new Error('Pattern required (--pattern)');
+    const patternInput = flags.pattern || positional.slice(1).join(" ");
+    if (!patternInput) throw new Error("Pattern required (--pattern)");
 
-    const regex = new RegExp(patternInput, flags.case === 'sensitive' ? '' : 'i');
+    const regex = new RegExp(
+      patternInput,
+      flags.case === "sensitive" ? "" : "i",
+    );
     const limit = toInt(flags.limit, 200);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : flags.oldest;
-    const messages = await fetchHistory(channelId, { limit, oldest, latest: flags.latest });
-    const rows = messagesToRows(channelId, messages).filter((row) => regex.test(row.text));
+    const messages = await fetchHistory(channelId, {
+      limit,
+      oldest,
+      latest: flags.latest,
+    });
+    const rows = messagesToRows(channelId, messages).filter((row) =>
+      regex.test(row.text),
+    );
 
     if (flags.json) {
-      printResult({ channel_id: channelId, pattern: patternInput, count: rows.length, messages: rows }, true);
+      printResult(
+        {
+          channel_id: channelId,
+          pattern: patternInput,
+          count: rows.length,
+          messages: rows,
+        },
+        true,
+      );
     } else {
       printHumanMessages(rows);
     }
@@ -295,21 +359,32 @@ const commands = {
   async threads(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
     const limit = toInt(flags.limit, 100);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : flags.oldest;
-    const messages = await fetchHistory(channelId, { limit, oldest, latest: flags.latest });
-    const rows = messagesToRows(channelId, messages).filter((row) => row.reply_count > 0);
+    const messages = await fetchHistory(channelId, {
+      limit,
+      oldest,
+      latest: flags.latest,
+    });
+    const rows = messagesToRows(channelId, messages).filter(
+      (row) => row.reply_count > 0,
+    );
 
     if (flags.json) {
-      printResult({ channel_id: channelId, count: rows.length, threads: rows }, true);
+      printResult(
+        { channel_id: channelId, count: rows.length, threads: rows },
+        true,
+      );
       return;
     }
 
     rows.forEach((row) => {
       console.log(`[${row.time}] ${compactText(row.text, 180)}`);
-      console.log(`  thread_ts=${row.thread_ts || row.ts} replies=${row.reply_count}`);
+      console.log(
+        `  thread_ts=${row.thread_ts || row.ts} replies=${row.reply_count}`,
+      );
     });
   },
 
@@ -317,17 +392,26 @@ const commands = {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
     const threadTs = positional[1];
-    if (!channelId || !threadTs) throw new Error('Channel ID and thread ts required');
+    if (!channelId || !threadTs)
+      throw new Error("Channel ID and thread ts required");
 
     const resp = await web.conversations.replies({
       channel: channelId,
       ts: threadTs,
-      limit: toInt(flags.limit, 200)
+      limit: toInt(flags.limit, 200),
     });
 
     const rows = messagesToRows(channelId, resp.messages || []);
     if (flags.json) {
-      printResult({ channel_id: channelId, thread_ts: threadTs, count: rows.length, messages: rows }, true);
+      printResult(
+        {
+          channel_id: channelId,
+          thread_ts: threadTs,
+          count: rows.length,
+          messages: rows,
+        },
+        true,
+      );
       return;
     }
 
@@ -337,25 +421,34 @@ const commands = {
   async threadScan(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
-    const parentPatternInput = flags['parent-pattern'] || flags.parent_pattern || '.*';
-    const replyPatternInput = flags['reply-pattern'] || flags.reply_pattern || null;
-    const replyUser = flags['reply-user'] || flags.reply_user || null;
+    const parentPatternInput =
+      flags["parent-pattern"] || flags.parent_pattern || ".*";
+    const replyPatternInput =
+      flags["reply-pattern"] || flags.reply_pattern || null;
+    const replyUser = flags["reply-user"] || flags.reply_user || null;
 
-    const parentRegex = new RegExp(parentPatternInput, flags.case === 'sensitive' ? '' : 'i');
+    const parentRegex = new RegExp(
+      parentPatternInput,
+      flags.case === "sensitive" ? "" : "i",
+    );
     const replyRegex = replyPatternInput
-      ? new RegExp(replyPatternInput, flags.case === 'sensitive' ? '' : 'i')
+      ? new RegExp(replyPatternInput, flags.case === "sensitive" ? "" : "i")
       : null;
 
     const limit = toInt(flags.limit, 200);
-    const maxThreads = toInt(flags['max-threads'] || flags.max_threads, 25);
-    const replyLimit = toInt(flags['reply-limit'] || flags.reply_limit, 200);
+    const maxThreads = toInt(flags["max-threads"] || flags.max_threads, 25);
+    const replyLimit = toInt(flags["reply-limit"] || flags.reply_limit, 200);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : flags.oldest;
 
-    const messages = await fetchHistory(channelId, { limit, oldest, latest: flags.latest });
+    const messages = await fetchHistory(channelId, {
+      limit,
+      oldest,
+      latest: flags.latest,
+    });
     const parents = messages
-      .filter((m) => (m.reply_count || 0) > 0 && parentRegex.test(m.text || ''))
+      .filter((m) => (m.reply_count || 0) > 0 && parentRegex.test(m.text || ""))
       .slice(0, maxThreads);
 
     const results = [];
@@ -363,13 +456,13 @@ const commands = {
       const resp = await web.conversations.replies({
         channel: channelId,
         ts: parent.ts,
-        limit: replyLimit
+        limit: replyLimit,
       });
 
       const replies = (resp.messages || []).filter((m) => m.ts !== parent.ts);
       const matchedReplies = replies.filter((m) => {
         if (replyUser && m.user !== replyUser) return false;
-        if (replyRegex && !replyRegex.test(m.text || '')) return false;
+        if (replyRegex && !replyRegex.test(m.text || "")) return false;
         return true;
       });
 
@@ -377,35 +470,44 @@ const commands = {
         if (matchedReplies.length > 0) {
           results.push({
             parent: messagesToRows(channelId, [parent])[0],
-            matches: messagesToRows(channelId, matchedReplies)
+            matches: messagesToRows(channelId, matchedReplies),
           });
         }
       } else {
         results.push({
           parent: messagesToRows(channelId, [parent])[0],
-          matches: messagesToRows(channelId, replies)
+          matches: messagesToRows(channelId, replies),
         });
       }
     }
 
     if (flags.json) {
-      printResult({
-        channel_id: channelId,
-        parent_pattern: parentPatternInput,
-        reply_pattern: replyPatternInput,
-        reply_user: replyUser,
-        scanned_threads: parents.length,
-        matched_threads: results.length,
-        results
-      }, true);
+      printResult(
+        {
+          channel_id: channelId,
+          parent_pattern: parentPatternInput,
+          reply_pattern: replyPatternInput,
+          reply_user: replyUser,
+          scanned_threads: parents.length,
+          matched_threads: results.length,
+          results,
+        },
+        true,
+      );
       return;
     }
 
     results.forEach((entry) => {
-      console.log(`[PARENT ${entry.parent.time}] ${compactText(entry.parent.text, 220)}`);
-      console.log(`  thread_ts=${entry.parent.thread_ts || entry.parent.ts} replies=${entry.parent.reply_count}`);
+      console.log(
+        `[PARENT ${entry.parent.time}] ${compactText(entry.parent.text, 220)}`,
+      );
+      console.log(
+        `  thread_ts=${entry.parent.thread_ts || entry.parent.ts} replies=${entry.parent.reply_count}`,
+      );
       entry.matches.forEach((m) => {
-        console.log(`    [${m.time}] ${m.user_id || m.bot_id || 'unknown'}: ${compactText(m.text, 220)}`);
+        console.log(
+          `    [${m.time}] ${m.user_id || m.bot_id || "unknown"}: ${compactText(m.text, 220)}`,
+        );
       });
     });
   },
@@ -419,10 +521,14 @@ const commands = {
 
   async usersResolve(args) {
     const { positional, flags } = parseArgs(args);
-    const idsRaw = flags.ids || positional.join(',');
-    if (!idsRaw) throw new Error('User IDs required (--ids U1,U2 or positional)');
+    const idsRaw = flags.ids || positional.join(",");
+    if (!idsRaw)
+      throw new Error("User IDs required (--ids U1,U2 or positional)");
 
-    const ids = idsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    const ids = idsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const rows = await resolveUsers(ids);
     if (flags.json) {
       printResult({ count: rows.length, users: rows }, true);
@@ -430,16 +536,22 @@ const commands = {
     }
 
     rows.forEach((u) => {
-      console.log(`${u.user_id} | ${u.real_name || u.username} | ${u.email || 'N/A'} | ${u.title || 'N/A'}`);
+      console.log(
+        `${u.user_id} | ${u.real_name || u.username} | ${u.email || "N/A"} | ${u.title || "N/A"}`,
+      );
     });
   },
 
   async channelsResolve(args) {
     const { positional, flags } = parseArgs(args);
-    const idsRaw = flags.ids || positional.join(',');
-    if (!idsRaw) throw new Error('Channel IDs required (--ids C1,C2 or positional)');
+    const idsRaw = flags.ids || positional.join(",");
+    if (!idsRaw)
+      throw new Error("Channel IDs required (--ids C1,C2 or positional)");
 
-    const ids = idsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    const ids = idsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const rows = await resolveChannels(ids);
     if (flags.json) {
       printResult({ count: rows.length, channels: rows }, true);
@@ -447,26 +559,38 @@ const commands = {
     }
 
     rows.forEach((c) => {
-      console.log(`${c.channel_id} | ${c.name || 'unknown'} | private=${c.is_private} | members=${c.member_count != null ? c.member_count : 'N/A'}`);
+      console.log(
+        `${c.channel_id} | ${c.name || "unknown"} | private=${c.is_private} | members=${c.member_count != null ? c.member_count : "N/A"}`,
+      );
     });
   },
 
   async extract(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
-    const mode = (flags.mode || 'blockers').toLowerCase();
+    const mode = (flags.mode || "blockers").toLowerCase();
     const pattern = extractPatterns[mode];
-    if (!pattern) throw new Error('Unsupported mode. Use blockers|tasks|decisions|risks');
+    if (!pattern)
+      throw new Error("Unsupported mode. Use blockers|tasks|decisions|risks");
 
     const limit = toInt(flags.limit, 200);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : flags.oldest;
-    const messages = await fetchHistory(channelId, { limit, oldest, latest: flags.latest });
-    const rows = messagesToRows(channelId, messages).filter((row) => pattern.test(row.text));
+    const messages = await fetchHistory(channelId, {
+      limit,
+      oldest,
+      latest: flags.latest,
+    });
+    const rows = messagesToRows(channelId, messages).filter((row) =>
+      pattern.test(row.text),
+    );
 
     if (flags.json) {
-      printResult({ channel_id: channelId, mode, count: rows.length, items: rows }, true);
+      printResult(
+        { channel_id: channelId, mode, count: rows.length, items: rows },
+        true,
+      );
       return;
     }
 
@@ -478,21 +602,29 @@ const commands = {
   async exportCmd(args) {
     const { positional, flags } = parseArgs(args);
     const channelId = positional[0];
-    if (!channelId) throw new Error('Channel ID required');
+    if (!channelId) throw new Error("Channel ID required");
 
-    const format = (flags.format || 'json').toLowerCase();
+    const format = (flags.format || "json").toLowerCase();
     const limit = toInt(flags.limit, 200);
     const oldest = flags.days ? toEpochDaysAgo(flags.days) : flags.oldest;
-    const messages = await fetchHistory(channelId, { limit, oldest, latest: flags.latest });
+    const messages = await fetchHistory(channelId, {
+      limit,
+      oldest,
+      latest: flags.latest,
+    });
     const rows = messagesToRows(channelId, messages);
 
     let output;
-    if (format === 'json') {
-      output = JSON.stringify({ channel_id: channelId, count: rows.length, messages: rows }, null, 2);
-    } else if (format === 'csv') {
-      const header = 'channel_id,ts,time,user_id,text,thread_ts,reply_count';
+    if (format === "json") {
+      output = JSON.stringify(
+        { channel_id: channelId, count: rows.length, messages: rows },
+        null,
+        2,
+      );
+    } else if (format === "csv") {
+      const header = "channel_id,ts,time,user_id,text,thread_ts,reply_count";
       const csvRows = rows.map((r) => {
-        const safe = (value) => `"${String(value || '').replace(/"/g, '""')}"`;
+        const safe = (value) => `"${String(value || "").replace(/"/g, '""')}"`;
         return [
           safe(r.channel_id),
           safe(r.ts),
@@ -500,23 +632,33 @@ const commands = {
           safe(r.user_id),
           safe(r.text),
           safe(r.thread_ts),
-          safe(r.reply_count)
-        ].join(',');
+          safe(r.reply_count),
+        ].join(",");
       });
-      output = [header, ...csvRows].join('\n');
-    } else if (format === 'md') {
-      const lines = ['# Slack Export', '', `- Channel: \`${channelId}\``, `- Messages: ${rows.length}`, ''];
+      output = [header, ...csvRows].join("\n");
+    } else if (format === "md") {
+      const lines = [
+        "# Slack Export",
+        "",
+        `- Channel: \`${channelId}\``,
+        `- Messages: ${rows.length}`,
+        "",
+      ];
       rows.forEach((r) => {
-        lines.push(`- [${r.time}] (${r.user_id || 'unknown'}) ${compactText(r.text, 400)}`);
+        lines.push(
+          `- [${r.time}] (${r.user_id || "unknown"}) ${compactText(r.text, 400)}`,
+        );
       });
-      output = lines.join('\n');
+      output = lines.join("\n");
     } else {
-      throw new Error('Unsupported format. Use json|csv|md');
+      throw new Error("Unsupported format. Use json|csv|md");
     }
 
     if (flags.out) {
       fs.writeFileSync(flags.out, output);
-      console.log(`Exported ${rows.length} messages to ${path.resolve(flags.out)}`);
+      console.log(
+        `Exported ${rows.length} messages to ${path.resolve(flags.out)}`,
+      );
       return;
     }
 
@@ -530,10 +672,15 @@ const commands = {
   },
 
   async files(channelId, limit = 10) {
-    const result = await web.files.list({ channel: channelId, limit: parseInt(limit, 10) });
+    const result = await web.files.list({
+      channel: channelId,
+      limit: parseInt(limit, 10),
+    });
     result.files.forEach((f) => {
       const date = new Date(f.timestamp * 1000).toLocaleString();
-      console.log(`${date} | ${f.name} | ${f.id} | ${(f.size / 1024).toFixed(1)}KB`);
+      console.log(
+        `${date} | ${f.name} | ${f.id} | ${(f.size / 1024).toFixed(1)}KB`,
+      );
     });
   },
 
@@ -542,11 +689,11 @@ const commands = {
     const file = result.file;
 
     if (!file.url_private) {
-      throw new Error('No download URL available for this file');
+      throw new Error("No download URL available for this file");
     }
 
     const response = await fetch(file.url_private, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!response.ok) {
@@ -559,13 +706,13 @@ const commands = {
 
     console.log(`Downloaded: ${file.name} -> ${path.resolve(dest)}`);
     console.log(`Size: ${(file.size / 1024).toFixed(1)}KB`);
-  }
+  },
 };
 
 async function main() {
   const [cmd, ...args] = process.argv.slice(2);
 
-  if (!cmd || cmd === 'help') {
+  if (!cmd || cmd === "help") {
     console.log(`Usage: slack-cli <command> [args]
 
 Commands:
@@ -593,57 +740,60 @@ Environment:
 
   try {
     switch (cmd) {
-      case 'channels':
+      case "channels":
         await commands.channels();
         break;
-      case 'history':
+      case "history":
         await commands.history(args);
         break;
-      case 'search':
+      case "search":
         await commands.search(args);
         break;
-      case 'messages-filter':
+      case "messages-filter":
         await commands.messagesFilter(args);
         break;
-      case 'threads':
+      case "threads":
         await commands.threads(args);
         break;
-      case 'thread-get':
+      case "thread-get":
         await commands.threadGet(args);
         break;
-      case 'thread-scan':
+      case "thread-scan":
         await commands.threadScan(args);
         break;
-      case 'users-resolve':
+      case "users-resolve":
         await commands.usersResolve(args);
         break;
-      case 'channels-resolve':
+      case "channels-resolve":
         await commands.channelsResolve(args);
         break;
-      case 'extract':
+      case "extract":
         await commands.extract(args);
         break;
-      case 'export':
+      case "export":
         await commands.exportCmd(args);
         break;
-      case 'send':
-      {
+      case "send": {
         const parsed = parseArgs(args);
         const channel = parsed.positional[0];
-        const text = parsed.positional.slice(1).join(' ');
-        if (!channel || !text) throw new Error('Channel and text required');
-        await commands.send(channel, text, parsed.flags['thread-ts'] || parsed.flags.thread_ts);
+        const text = parsed.positional.slice(1).join(" ");
+        if (!channel || !text) throw new Error("Channel and text required");
+        await commands.send(
+          channel,
+          text,
+          parsed.flags["thread-ts"] || parsed.flags.thread_ts,
+        );
         break;
       }
-      case 'test':
+      case "test":
         await commands.test();
         break;
-      case 'files':
-        if (!args[0]) throw new Error('Channel ID required');
+      case "files":
+        if (!args[0]) throw new Error("Channel ID required");
         await commands.files(args[0], args[1]);
         break;
-      case 'download':
-        if (!args[0]) throw new Error('File ID required');
+      case "download":
+        if (!args[0]) throw new Error("File ID required");
         await commands.download(args[0], args[1]);
         break;
       default:

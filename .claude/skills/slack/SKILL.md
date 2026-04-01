@@ -49,6 +49,8 @@ Get your token from https://api.slack.com/apps:
    - `files:read`
 3. Install to workspace (as yourself)
 4. Copy "User OAuth Token" (starts with `xoxp-`)
+5. Create `.env` file and save your token in it:
+   - `SLACK_TOKEN=xoxp-your-token`
 
 ## Key Methods
 
