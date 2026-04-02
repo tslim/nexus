@@ -11,6 +11,7 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 
 - `work-start` bootstraps and generates `CLAUDE.md` + `memory/` when missing.
 - `work-update` keeps tasks and memory current through interactive sync.
+- `task-management` defines how `TASKS.md` is structured and updated.
 - `memory-management` defines what belongs in hot memory vs deep memory.
 
 ## Skills in This Repo
