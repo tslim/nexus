@@ -73,13 +73,13 @@ Post this structure as one threaded reply:
 
 ```text
 :white_check_mark: Yesterday: 
-<answer 1>
+- <answer 1>
 
 :hammer: Today: 
-<answer 2>
+- <answer 2>
 
 :construction: Blockers: 
-<answer 3 or "None">
+- <answer 3 or "None">
 ```
 
 Then send using:
