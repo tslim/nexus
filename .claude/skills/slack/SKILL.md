@@ -29,7 +29,7 @@ node .claude/skills/slack/slack-cli.js <command> [args]
 | `channels-resolve --ids <id1,id2>` | Resolve channel IDs in batch | `node slack-cli.js channels-resolve --ids C1,C2` |
 | `extract <channelId> --mode <blockers\|tasks\|decisions\|risks> [--days N] [--json]` | Extract workflow signals from messages | `node slack-cli.js extract C0A1K7R9W74 --mode blockers --days 7` |
 | `export <channelId> [--format json\|csv\|md] [--out path]` | Export channel messages for analysis | `node slack-cli.js export C0A1K7R9W74 --format md --out blockers.md` |
-| `send <channel> <text> [--thread-ts ts]` | Send message to channel or thread | `node slack-cli.js send C0A1K7R9W74 'Update posted' --thread-ts 123.456` |
+| `send <channel> <text> [--thread-ts ts] [--rich-text]` | Send message to channel or thread | `node slack-cli.js send C0A1K7R9W74 'Update posted' --thread-ts 123.456 --rich-text` |
 | `files <channelId> [limit]` | List files in channel | `node slack-cli.js files C0A11MKGDT2 10` |
 | `download <fileId> [path]` | Download attachment | `node slack-cli.js download F12345678 ./file.pdf` |
 | `test` | Test authentication | `node slack-cli.js test` |

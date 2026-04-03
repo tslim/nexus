@@ -51,6 +51,77 @@ function toInt(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function lineToRichTextElements(line) {
+  const parts = String(line || "").split(/(:[a-z0-9_+-]+:)/g);
+  const elements = [];
+
+  parts.forEach((part) => {
+    if (!part) return;
+    const match = part.match(/^:([a-z0-9_+-]+):$/);
+    if (match) {
+      elements.push({ type: "emoji", name: match[1] });
+      return;
+    }
+    elements.push({ type: "text", text: part });
+  });
+
+  return elements.length ? elements : [{ type: "text", text: "" }];
+}
+
+function textToRichTextBlocks(text) {
+  const lines = String(text || "").split(/\r?\n/);
+  const elements = [];
+  let listItems = [];
+  let pendingBlankLine = false;
+
+  function pushBlankLine() {
+    if (!pendingBlankLine) return;
+    elements.push({
+      type: "rich_text_section",
+      elements: [{ type: "text", text: "\n\n" }],
+    });
+    pendingBlankLine = false;
+  }
+
+  function flushList() {
+    if (!listItems.length) return;
+    pushBlankLine();
+    elements.push({
+      type: "rich_text_list",
+      style: "bullet",
+      elements: listItems.map((item) => ({
+        type: "rich_text_section",
+        elements: lineToRichTextElements(item),
+      })),
+    });
+    listItems = [];
+  }
+
+  lines.forEach((line) => {
+    if (!line.trim()) {
+      flushList();
+      pendingBlankLine = elements.length > 0;
+      return;
+    }
+
+    if (line.startsWith("- ")) {
+      pushBlankLine();
+      listItems.push(line.slice(2));
+      return;
+    }
+
+    flushList();
+    pushBlankLine();
+    elements.push({
+      type: "rich_text_section",
+      elements: lineToRichTextElements(line),
+    });
+  });
+
+  flushList();
+  return [{ type: "rich_text", elements }];
+}
+
 function toEpochDaysAgo(days) {
   const d = toInt(days, null);
   if (!d) return null;
@@ -553,9 +624,10 @@ const commands = {
     });
   },
 
-  async send(channel, text, threadTs) {
+  async send(channel, text, threadTs, richText = false) {
     const payload = { channel, text };
     if (threadTs) payload.thread_ts = threadTs;
+    if (richText) payload.blocks = textToRichTextBlocks(text);
     const result = await web.chat.postMessage(payload);
     console.log(`Sent: ${result.ts}`);
   },
@@ -770,7 +842,7 @@ Commands:
   extract <channelId> --mode blockers|tasks|decisions|risks [--days N] [--limit N] [--json]
   export <channelId> [--format json|csv|md] [--out path] [--days N] [--limit N]
 
-  send <channel> <text> [--thread-ts ts]
+  send <channel> <text> [--thread-ts ts] [--rich-text]
   files <channelId> [limit]
   download <fileId> [path]
   test
@@ -827,6 +899,7 @@ Environment:
           channel,
           text,
           parsed.flags["thread-ts"] || parsed.flags.thread_ts,
+          !!(parsed.flags["rich-text"] || parsed.flags.rich_text),
         );
         break;
       }

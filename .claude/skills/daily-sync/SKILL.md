@@ -44,6 +44,7 @@ Use this exact question structure:
 
 Rules:
 - Keep suggestions concise and factual. Do not invent progress.
+- Format each suggested answer as bullet-ready content. Prefer one or more lines starting with `- ` so the posted update can be converted into Slack rich text bullets.
 - If confidence is low for any field, leave it blank and ask the user to fill it.
 - Treat user corrections as final.
 - If the user selects the suggested options, post directly without re-asking.
@@ -71,6 +72,11 @@ node .claude/skills/slack/slack-cli.js thread-scan <DAILY_SYNC_CHANNEL_ID> --par
 
 Post this structure as one threaded reply:
 
+- Keep the `- ` bullet prefix for each answer line.
+- If a section has multiple items, use multiple `- ` lines under that heading.
+- Send the final message with `--rich-text` so Slack renders the list items as actual bullets.
+- Keep a blank line between `Yesterday`, `Today`, and `Blockers` sections so the rich text renderer preserves visual separation.
+
 ```text
 :white_check_mark: Yesterday: 
 - <answer 1>
@@ -85,7 +91,7 @@ Post this structure as one threaded reply:
 Then send using:
 
 ```bash
-node .claude/skills/slack/slack-cli.js send <DAILY_SYNC_CHANNEL_ID> "<formatted message>" --thread-ts <thread_ts>
+node .claude/skills/slack/slack-cli.js send <DAILY_SYNC_CHANNEL_ID> "<formatted message>" --thread-ts <thread_ts> --rich-text
 ```
 
 ## Response Back to User
