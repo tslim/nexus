@@ -3402,7 +3402,7 @@
       const file = files.find(f => f.name === fileName);
       if (!file) return;
 
-      document.getElementById('modalTitle').textContent = getDisplayName(fileName);
+      document.getElementById('modalTitle').textContent = file.parsed?.title || getDisplayName(fileName);
       document.getElementById('modalBody').innerHTML = `
         <div class="markdown-content" style="margin-bottom: 20px;">
           ${renderMarkdownToHtml(file.content, dirName)}
