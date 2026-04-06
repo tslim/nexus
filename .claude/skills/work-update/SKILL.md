@@ -1,205 +1,111 @@
 ---
 name: work-update
-description: Sync all work context from external sources, create/update task/memory files and present a summary of changes
+description: Sync work context from external sources, update tasks and memory, and report changes
 ---
 
 # Work Update
 
-> If you see unfamiliar placeholders or need to check which skills are available in `.claude/skills`
+Load `memory-management` and `task-management` before continuing.
 
-Load `memory-management` and `task-management` skill before continuing.
+## Flow
 
-## Usage
+### 1. Load state
+- Read `TASKS.md` and `memory/`
+- If missing, suggest `/work-start`
 
-```bash
-/work-update
-```
+### 2. Sync tasks from external sources
+Check available sources such as:
+- project trackers like Asana, Linear, or Jira
+- GitHub Issues: `gh issue list --assignee=@me`
 
-## Update User Tasks and Memory
+Compare external tasks against `TASKS.md`:
+- new external task -> offer to add
+- matching task already tracked -> skip
+- task missing externally -> flag as potentially stale
+- completed externally -> offer to mark done
 
-### 1. Load Current State
+### 3. Scan activity
+Gather recent signals from available sources:
+- chat
+- email
+- documents
+- calendar
+- notes
 
-Read `TASKS.md` and `memory/` directory. If they don't exist, suggest `/work-start` first.
+### 4. Flag missing tasks
+Surface likely todos not tracked in `TASKS.md`.
 
-### 2. Sync Tasks from External Sources
+Also surface durable memory candidates from the same activity, such as:
+- repeated stakeholders not in `memory/people/`
+- recurring projects or terms not in memory
+- durable status, ownership, or relationship updates for existing pages
 
-Check for available task sources:
-- **Project tracker** (e.g. Asana, Linear, Jira) (if MCP available)
-- **GitHub Issues** (if in a repo): `gh issue list --assignee=@me`
+### 5. Triage stale tasks
+Review active tasks for:
+- past due dates
+- 30+ day age
+- missing project/person context
 
-If no sources are available, skip to Step 3.
+Present triage options like done, reschedule, or move to someday.
 
-**Fetch tasks assigned to the user** (open/in-progress). Compare against TASKS.md:
+### 6. Decode task gaps
+For each task, try to decode people, projects, acronyms, tools, and links.
+Track what is known and what still needs clarification.
 
-| External task | TASKS.md match? | Action |
-|---------------|-----------------|--------|
-| Found, not in TASKS.md | No match | Offer to add |
-| Found, already in TASKS.md | Match by title (fuzzy) | Skip |
-| In TASKS.md, not in external | No match | Flag as potentially stale |
-| Completed externally | In Active section | Offer to mark done |
+### 7. Suggest memory updates
+Group findings into:
+- new people
+- new projects or topics
+- cleanup suggestions
 
-Present diff and let user decide what to add/complete.
+Policy:
+- safe enrichments to existing `memory/` pages may be applied during `work-update`
+- major new memory additions must be confirmed first
+- if durability is unclear, present a suggestion instead of editing memory
 
-### 3. Scan Activity Sources
+### 8. Fill memory gaps
+Ask about unknown terms or people.
 
-Gather data from available MCP sources:
-- **Chat:** Search recent messages/threads/replies, read active channels
-- **Email:** Search recent messages
-- **Documents:** List recently touched docs
-- **Calendar:** List recent + upcoming events
-- **Notes**: Search meeting notes
+Prefer updating existing pages.
+Only create a new memory page when the entity is clearly durable and likely to recur.
 
-### 4. Flag Missed Todos
+### 9. Capture enrichment
+Useful enrichments include:
+- links added to existing project or person pages
+- clear status changes
+- durable relationships or ownership notes
+- deadlines worth preserving in project context
 
-Compare activity against TASKS.md. Surface action items that aren't tracked:
+Safe enrichment examples:
+- add a new link to an existing project page
+- update an existing project status from a clear source
+- add a collaborator or relationship to an existing page
 
-```
-## Possible Missing Tasks
+Still require confirmation:
+- new person page
+- new project page
+- weakly supported term promoted into `CLAUDE.md`
 
-From your activity, these look like todos you haven't captured:
-
-1. From chat (Jan 18):
-   "I'll send the updated mockups by Friday"
-   → Add to TASKS.md?
-
-2. From meeting "Phoenix Standup" (Jan 17):
-   You have a recurring meeting but no Phoenix tasks active
-   → Anything needed here?
-
-3. From email (Jan 16):
-   "I'll review the API spec this week"
-   → Add to TASKS.md?
-   
-4. From chat (Jan 20):
-   "I have an issue that's blocking me"
-   → Add to TASKS.md to follow up?
-```
-
-Let user pick which to add.
-
-Alongside possible missing tasks, note any durable memory-enrichment candidates surfaced by the same activity.
-Examples:
-- a repeated stakeholder not yet in `memory/people/`
-- a recurring project/topic not yet in `memory/projects/` or `memory/glossary.md`
-- a durable relationship, status change, or ownership note worth adding to an existing memory page
-
-### 5. Triage Stale Items
-
-Review Active tasks in TASKS.md and flag:
-- Tasks with due dates in the past
-- Tasks in Active for 30+ days
-- Tasks with no context (no person, no project)
-
-Present each for triage: Mark done? Reschedule? Move to Someday?
-
-### 6. Decode Tasks for Memory Gaps
-
-For each task, attempt to decode all entities (people, projects, acronyms, tools, links):
-
-```
-Task: "Send PSR to Todd re: Phoenix blockers"
-
-Decode:
-- PSR → ✓ Pipeline Status Report (in glossary)
-- Todd → ✓ Todd Martinez (in people/)
-- Phoenix → ? Not in memory
-```
-
-Track what's fully decoded vs. what has gaps.
-
-### 7. Suggest New Memories
-
-Surface new entities not in memory:
-
-```
-## New People (not in memory)
-| Name | Frequency | Context |
-|------|-----------|---------|
-| Maya Rodriguez | 12 mentions | design, UI reviews |
-| Alex K | 8 mentions | DMs about API |
-
-## New Projects/Topics
-| Name | Frequency | Context |
-|------|-----------|---------|
-| Starlight | 15 mentions | planning docs, product |
-
-## Suggested Cleanup
-- **Horizon project** — No mentions in 30 days. Mark completed?
-```
-
-Present grouped by confidence. High-confidence enrichments to existing memory pages can be recommended directly, but major new memories should still be confirmed by the user before adding.
-
-### 8. Fill Gaps
-
-Present unknown terms grouped:
-```
-I found terms in your tasks I don't have context for:
-
-1. "Phoenix" (from: "Send PSR to Todd re: Phoenix blockers")
-   → What's Phoenix?
-
-2. "Maya" (from: "sync with Maya on API design")
-   → Who is Maya?
-```
-
-Add answers to the appropriate memory files (people/, projects/, glossary.md).
-
-Prefer filling existing pages over creating new ones. Only create a new memory page when the entity or topic is clearly durable and likely to recur.
-
-### 9. Capture Enrichment
-
-Tasks often contain richer context than memory. Extract and update:
-- **Links** from tasks → add to project/people files
-- **Status changes** ("launch done") → update project status, demote from CLAUDE.md
-- **Relationships** ("Todd's sign-off on Maya's proposal") → cross-reference people
-- **Deadlines** → add to project files
-
-Use this default policy:
-- Safe enrichments to existing `memory/` pages may be applied during `work-update`
-- Major new memory additions should be proposed first and confirmed by the user
-- If uncertain whether something is durable, present it as a suggestion instead of editing memory directly
-
-Examples of safe enrichments:
-- adding a newly observed link to an existing project page
-- updating an existing project status from a clear meeting outcome
-- adding a relationship or collaborator mention to an existing person or project page
-
-Examples that still need confirmation:
-- creating a brand new person page
-- creating a brand new project page
-- promoting a weakly supported term into `CLAUDE.md`
+If `work-update` materially changes a file under `memory/`, append a log entry to `memory/log.md` using the standard format.
 
 ### 10. Report
+Summarize:
+- task changes
+- memory changes
+- unresolved gaps
 
-```
-Update complete:
-- Tasks: +3 from project tracker (e.g. Asana), 1 completed, 2 triaged
-- Memory: 2 gaps filled, 1 project enriched
-- All tasks decoded ✓
-```
-
-If memory was enriched, report whether the change was:
+If memory changed, say whether it was:
 - a safe update to an existing page
 - a suggested but unconfirmed new memory
-- a gap that still needs user clarification
+- a gap that still needs clarification
 
-### 11. Memory Backup
-
-If this run changed any of these:
-- `CLAUDE.md`
-- `TASKS.md`
-- anything under `memory/`
-
-Then trigger the `memory-backup` skill.
-
-Only trigger the backup if files were actually changed. If nothing changed in tasks or memory, skip it.
+### 11. Memory backup
+If this run changed `CLAUDE.md`, `TASKS.md`, or anything under `memory/`, trigger `memory-backup`.
 
 ## Notes
 
-- Never auto-add tasks or memories without user confirmation
-- Safe enrichments to existing memory pages are allowed during `work-update`; net-new memory entities still require confirmation
-- External source links are preserved when available
-- Fuzzy matching on task titles handles minor wording differences
-- Safe to run frequently — only updates when there's new info
-- This command always runs interactively
-- When `TASKS.md`, `CLAUDE.md`, or `memory/` changes, finish by triggering `/memory-backup`
+- This command is interactive
+- External links should be preserved when available
+- Fuzzy title matching is fine for task comparison
+- Safe enrichments to existing memory pages are allowed; net-new memory entities still require confirmation
+- If nothing changed, skip backup

@@ -1,36 +1,16 @@
 ---
 name: task-management
-description: Simple task management using a shared TASKS.md file. Reference this when the user asks about their tasks, wants to add/complete tasks, or needs help tracking commitments.
+description: Simple task management using a shared TASKS.md file.
 ---
 
 # Task Management
 
-Tasks are tracked in a simple `TASKS.md` file that both you and the user can edit.
+Tasks live in `TASKS.md` in the current working directory.
 
-## File Location
+## File Rules
 
-**Always use `TASKS.md` in the current working directory.**
-
-- If it exists, read/write to it
-- If it doesn't exist, create it with the template below
-
-## Dashboard Setup (First Run)
-
-A visual dashboard is available for managing tasks and memory. **On first interaction with tasks:**
-
-1. Check if `dashboard.html` exists in the current working directory
-2. If not, copy it from `./skills/dashboard.html` to the current working directory
-3. Inform the user: "I've added the dashboard. Run `/work-start` to set up the full system."
-
-The task board:
-- Reads and writes to the same `TASKS.md` file
-- Auto-saves changes
-- Watches for external changes (syncs when you edit via CLI)
-- Supports drag-and-drop reordering of tasks and sections
-
-## Format & Template
-
-When creating a new TASKS.md, use this exact template (without example tasks):
+- Always use `TASKS.md`
+- If it does not exist, create it with this template:
 
 ```markdown
 # Tasks
@@ -44,49 +24,56 @@ When creating a new TASKS.md, use this exact template (without example tasks):
 ## Done
 ```
 
-Task format:
-- `- [ ] **Task title** - [Project](memory/projects/file.md) link, Note with [Person](memory/people/name.md) link _(added YYYY-MM-DD)_`
-- For executable subtasks, use checkbox sub-bullets: `  - [ ] Sub-step`
-- For non-action context, use plain sub-bullets: `  - Context note`
-- Completed: `- [x] ~~Task~~ (date)`
+## Dashboard
 
-## How to Interact
+On first task interaction:
 
-**When user asks "what's on my plate" / "my tasks":**
-- Read TASKS.md
-- Summarize Active and Waiting On sections
-- Highlight anything overdue or urgent
+1. Check for `dashboard.html`
+2. If missing, copy it from `./skills/dashboard.html`
+3. Tell the user: `I've added the dashboard. Run /work-start to set up the full system.`
 
-**When user says "add a task" / "remind me to":**
-- Add to Active section with `- [ ] **Task**` format
-- Include context if provided (who it's for, due date)
+## Task Format
 
-**When user says "done with X" / "finished X":**
-- Find the task
+- Task: `- [ ] **Task title** - [Project](memory/projects/file.md) link, Note with [Person](memory/people/name.md) link _(added YYYY-MM-DD)_`
+- Executable subtask: `  - [ ] Sub-step`
+- Context note: `  - Context note`
+- Done: `- [x] ~~Task~~ (date)`
+
+## Common Actions
+
+### List tasks
+- Read `TASKS.md`
+- Summarize `Active` and `Waiting On`
+- Highlight overdue or urgent items
+
+### Add a task
+- Add to `Active`
+- Include context if given: person, project, due date, waiting status
+
+### Complete a task
 - Change `[ ]` to `[x]`
-- Add strikethrough: `~~task~~`
-- Add completion date
-- Move to Done section
+- Add strikethrough and completion date
+- Move it to `Done`
 
-**When user asks "what am I waiting on":**
-- Read the Waiting On section
-- Note how long each item has been waiting
+### Waiting on
+- Use `Waiting On` for dependencies or pending replies
+- Include who or what is blocking progress when known
 
 ## Conventions
 
-- **Bold** the task title for scannability
-- Include "for [person]" when it's a commitment to someone
-- Include "due [date]" for deadlines
-- Include "since [date]" for waiting items
-- Prefer checkbox sub-steps when work can be completed independently and tracked
-- Use plain sub-bullets only for references, constraints, or notes
-- Keep Done section for ~1 week, then clear old items
+- Bold the task title
+- Include `for [person]` when it is a commitment
+- Include `due [date]` for deadlines
+- Include `since [date]` for waiting items
+- Prefer checkbox sub-steps for actionable work
+- Use plain sub-bullets only for context or constraints
+- Keep `Done` to about one week of recent completions
 
 ## Extracting Tasks
 
-When summarizing meetings or conversations, offer to add extracted tasks:
-- Commitments the user made ("I'll send that over")
-- Action items assigned to them
-- Follow-ups mentioned
+When summarizing meetings or conversations, offer to add:
+- commitments the user made
+- action items assigned to them
+- follow-ups that clearly need tracking
 
-Ask before adding - don't auto-add without confirmation.
+Ask before adding extracted tasks.

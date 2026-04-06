@@ -1,501 +1,147 @@
 ---
 name: memory-management
-description: Hot-cache plus persistent wiki memory system. CLAUDE.md handles fast operational decoding, while memory/ stores the deeper, durable knowledge base Claude maintains over time.
+description: Hot-cache plus persistent wiki memory system. CLAUDE.md handles fast operational decoding, while memory/ stores durable knowledge Claude maintains over time.
 ---
 
 # Memory Management
 
-Memory makes Claude your workplace collaborator - someone who speaks your internal language and maintains a durable knowledge base over time.
+Use a two-layer memory system:
 
-## The Goal
-
-Transform shorthand into understanding:
-
-```
-User: "ask todd to do the PSR for oracle"
-              ↓ Claude decodes
-"Ask Todd Martinez (Finance lead) to prepare the Pipeline Status Report
- for the Oracle Systems deal ($2.3M, closing Q2)"
-```
-
-Without memory, that request is meaningless. With memory, Claude knows:
-- **todd** → Todd Martinez, Finance lead, prefers Slack
-- **PSR** → Pipeline Status Report (weekly sales doc)
-- **oracle** → Oracle Systems deal, not the company
-
-## Architecture
-
-```
-CLAUDE.md          ← Hot cache (~30 people, common terms)
+```text
+CLAUDE.md          <- Hot cache for frequent people, terms, projects, preferences
 memory/
-  index.md         ← Top-level catalog of wiki pages
-  log.md           ← Chronological log of memory artifact changes
-  glossary.md      ← Decoder ring + durable term reference
-  people/          ← Complete profiles
-  projects/        ← Project details and evolving context
-  context/         ← Company, teams, tools
+  index.md         <- Top-level catalog
+  log.md           <- Append-only log of memory file changes
+  glossary.md      <- Terms, aliases, decoder ring
+  people/          <- Person pages
+  projects/        <- Project pages
+  context/         <- Company, team, tool context
 ```
 
-This is still a two-tier system, but the deep tier is now treated as a persistent wiki layer, not only a lookup store. `CLAUDE.md` stays optimized for fast decoding during day-to-day work. `memory/` is where durable context accumulates, gets enriched, and remains available across sessions.
+## Purpose
 
-**CLAUDE.md (Hot Cache):**
-- Top ~30 people you interact with most
-- ~30 most common acronyms/terms
-- Active projects (5-15)
-- Your preferences
-- **Goal: Cover 90% of daily decoding needs**
+- `CLAUDE.md` is for fast decoding during active work
+- `memory/` is the durable wiki
+- Prefer enriching existing memory over creating fragments
 
-**memory/ (Persistent Wiki Layer):**
-- Durable markdown knowledge base maintained over time
-- Stores richer context than fits in `CLAUDE.md`
-- Compatible with current `glossary.md`, `people/`, `projects/`, and `context/`
-- Navigated through `memory/index.md` and `memory/log.md` as it grows
+## Lookup Order
 
-**memory/glossary.md, people/, projects/, context/:**
-- Rich detail when needed for execution
-- Full profiles, history, context
-- Living knowledge artifacts that can be updated as understanding improves
+When the user uses shorthand or asks for context:
 
-## Lookup Flow
-
-```
-User: "ask todd about the PSR for phoenix"
-
-1. Check CLAUDE.md (hot cache)
-   → Todd? ✓ Todd Martinez, Finance
-   → PSR? ✓ Pipeline Status Report
-   → Phoenix? ✓ DB migration project
-
-2. If not found → check memory/index.md and memory/glossary.md
-   → Index helps route to the right durable page
-
-3. If still not found → search memory/people/, projects/, context/
-
-4. If still not found → ask user
-   → "What does X mean? I'll remember it."
-```
-
-This tiered approach keeps `CLAUDE.md` lean (~100 lines) while allowing `memory/` to grow into a compiled, durable knowledge base.
-
-## File Locations
-
-- **Working memory:** `CLAUDE.md` in current working directory
-- **Persistent wiki:** `memory/` subdirectory
-- **Wiki catalog:** `memory/index.md`
-- **Wiki log:** `memory/log.md`
-
-## Link Format (CRITICAL — always use these when writing to files)
-| Writing in | Link to people | Link to projects |
-|-----------|---------------|-----------------|
-| CLAUDE.md or TASKS.md | `[Name](memory/people/name.md)` | `[Project](memory/projects/file.md)` |
-| memory/glossary.md | `[Name](people/name.md)` | `[Project](projects/file.md)` |
-| memory/people/*.md | `[Other person](othername.md)` | `[Project](../projects/file.md)` |
-| memory/projects/*.md | `[Person](../people/name.md)` | — |
-
-## Working Memory Format (CLAUDE.md)
-
-Use tables for compactness. Target ~50-80 lines total.
-
-```markdown
-# Memory
-
-## Me
-[Name], [Role] on [Team]. [One sentence about what I do.]
-
-## People
-| Who | Role |
-|-----|------|
-| **Todd** | Todd Martinez, Finance lead |
-| **Sarah** | Sarah Chen, Engineering (Platform) |
-| **Greg** | Greg Wilson, Sales |
-→ Full list: memory/glossary.md, profiles: memory/people/
-
-## Terms
-| Term | Meaning |
-|------|---------|
-| PSR | Pipeline Status Report |
-| P0 | Drop everything priority |
-| standup | Daily 9am sync |
-→ Full glossary: memory/glossary.md
-
-## Projects
-| Name | What |
-|------|------|
-| **Phoenix** | DB migration, Q2 launch |
-| **Horizon** | Mobile app redesign |
-→ Details: memory/projects/
-
-## Preferences
-- 25-min meetings with buffers
-- Async-first, Slack over email
-- No meetings Friday afternoons
-```
-
-## Persistent Wiki Format (memory/)
-
-**memory/glossary.md** - The decoder ring and term reference:
-```markdown
-# Glossary
-
-Workplace shorthand, acronyms, and internal language.
-
-## Acronyms
-| Term | Meaning | Context |
-|------|---------|---------|
-| PSR | Pipeline Status Report | Weekly sales doc |
-| OKR | Objectives & Key Results | Quarterly planning |
-| P0/P1/P2 | Priority levels | P0 = drop everything |
-
-## Internal Terms
-| Term | Meaning |
-|------|---------|
-| standup | Daily 9am sync in #engineering |
-| the migration | Project Phoenix database work |
-| ship it | Deploy to production |
-| escalate | Loop in leadership |
-
-## Nicknames → Full Names
-| Nickname | Person |
-|----------|--------|
-| Todd | Todd Martinez (Finance) |
-| T | Also Todd Martinez |
-
-## Project Codenames
-| Codename | Project |
-|----------|---------|
-| Phoenix | Database migration |
-| Horizon | New mobile app |
-```
-
-**memory/people/{name}.md:**
-```markdown
-# Todd Martinez
-
-**Also known as:** Todd, T
-**Role:** Finance Lead
-**Team:** Finance
-**Reports to:** CFO (Michael Chen)
-
-## Communication
-- Prefers Slack DM
-- Quick responses, very direct
-- Best time: mornings
-
-## Context
-- Handles all PSRs and financial reporting
-- Key contact for deal approvals over $500k
-- Works closely with Sales on forecasting
-
-## Relationships
-- reports_to: CFO (Michael Chen)
-- works_on: [Project Phoenix](../projects/project-phoenix.md)
-- collaborates_with: [Greg Wilson](greg-wilson.md)
-
-## Notes
-- Cubs fan, likes talking baseball
-```
-
-**memory/projects/{name}.md:**
-```markdown
-# Project Phoenix
-
-**Codename:** Phoenix
-**Also called:** "the migration"
-**Status:** Active, launching Q2
-
-## What It Is
-Database migration from legacy Oracle to PostgreSQL.
-
-## Key People
-- Sarah - tech lead
-- Todd - budget owner
-- Greg - stakeholder (sales impact)
-
-## Relationships
-- owns: Todd Martinez
-- depends_on: Horizon project
-- blocks: -
-
-## Context
-$1.2M budget, 6-month timeline. Critical path for Horizon project.
-```
-
-**memory/context/company.md:**
-```markdown
-# Company Context
-
-## Tools & Systems
-| Tool | Used for | Internal name |
-|------|----------|---------------|
-| Slack | Communication | - |
-| Asana | Engineering tasks | - |
-| Salesforce | CRM | "SF" or "the CRM" |
-| Notion | Docs/wiki | - |
-
-## Teams
-| Team | What they do | Key people |
-|------|--------------|------------|
-| Platform | Infrastructure | Sarah (lead) |
-| Finance | Money stuff | Todd (lead) |
-| Sales | Revenue | Greg |
-
-## Processes
-| Process | What it means |
-|---------|---------------|
-| Weekly sync | Monday 10am all-hands |
-| Ship review | Thursday deploy approval |
-```
-
-**memory/index.md** - Top-level catalog:
-```markdown
-# Memory Index
-
-## Core Files
-- [glossary.md](glossary.md) - Decoder ring
-- [log.md](log.md) - Chronological change history
-
-## Directories
-- `people/`
-- `projects/`
-- `context/`
-```
-
-**memory/log.md** - Chronological record of memory artifact changes:
-```markdown
-# Memory Log
-
-2026-04-06 17:50:25 +0800 | phase-2 | memory/log.md | Added index and log primitives to the persistent wiki layer.
-```
-
-`memory/log.md` is append-only. Add new entries only at the end of the file and keep timestamps monotonic.
+1. Check `CLAUDE.md`
+2. Check `memory/index.md`
+3. Check `memory/glossary.md`
+4. Check the most relevant page under `memory/`
+5. Check `memory/log.md` if recent memory changes may matter
+6. Ask the user if still unknown
 
 ## Core Workflows
 
-Use these four workflows when operating on memory:
+### Decode
+- Use for shorthand, acronyms, nicknames, codenames, and implied context
+- Goal: resolve meaning quickly and accurately
 
-### 1. Decode
-- Use when the user references shorthand, acronyms, nicknames, codenames, or implied context.
-- Goal: resolve meaning quickly so execution is accurate.
-- Default lookup order:
-  1. `CLAUDE.md`
-  2. `memory/index.md`
-  3. `memory/glossary.md`
-  4. relevant pages under `memory/`
-  5. ask the user if still unknown
+### Ingest
+- Use for durable new information: meetings, project updates, decisions, recurring threads, or explicit "remember this"
+- Update existing pages first
+- Keep `CLAUDE.md` short; put durable detail in `memory/`
 
-### 2. Ingest
-- Use when new durable source material appears: meetings, project updates, decisions, recurring threads, or explicit "remember this" input.
-- Goal: integrate information into the persistent wiki, not just answer once.
-- Default behavior:
-  - enrich existing pages first
-  - update `memory/index.md` only when navigation changes
-  - append to `memory/log.md` when a `memory/` artifact materially changes
-  - avoid creating duplicate fragments
+### Query
+- Use for synthesized answers across memory
+- Answer from the wiki, not only from recent chat
+- If the answer will help a future session, file it back into memory
 
-### 3. Query
-- Use when the user asks for synthesized understanding across memory.
-- Goal: answer from the wiki layer, not only from raw chat context.
-- If the result is durable and likely reusable, prefer filing it back into memory instead of leaving it only in chat.
+### Lint
+- Use to review memory quality
+- Report first, edit second
+- Prefer targeted cleanup over broad rewrites
 
-### 4. Lint
-- Use when reviewing memory quality, staleness, gaps, duplication, or structural issues.
-- Goal: detect what needs cleanup or enrichment.
-- In this phase, lint can identify issues, but cleanup rules remain conservative until later phases.
+## File Rules
 
-## How to Interact
+### `CLAUDE.md`
+- Keep compact, roughly 50-100 lines
+- Store only frequent people, terms, active projects, and preferences
 
-### Decoding User Input (Tiered Lookup)
+### `memory/log.md`
+- Format: `YYYY-MM-DD HH:MM:SS +TZ | tag | path | message`
+- Append-only
+- Add new entries only at the end
+- Keep timestamps monotonic
+- Log only material changes to files under `memory/`
 
-**Always** decode shorthand before acting on requests:
+### Link Format
 
-```
-1. CLAUDE.md (hot cache)     → Check first, covers 90% of cases
-2. memory/index.md           → Route to the right durable page
-3. memory/glossary.md        → Full glossary if not in hot cache
-4. memory/people/, projects/ → Rich detail when needed
-5. Ask user                  → Unknown term? Learn it.
-```
+| Writing in | Link to people | Link to projects |
+|-----------|---------------|-----------------|
+| `CLAUDE.md` or `TASKS.md` | `[Name](memory/people/name.md)` | `[Project](memory/projects/file.md)` |
+| `memory/glossary.md` | `[Name](people/name.md)` | `[Project](projects/file.md)` |
+| `memory/people/*.md` | `[Other person](othername.md)` | `[Project](../projects/file.md)` |
+| `memory/projects/*.md` | `[Person](../people/name.md)` | - |
 
-Example:
-```
-User: "ask todd to do the PSR for oracle"
+## Memory Types
 
-CLAUDE.md lookup:
-  "todd" → Todd Martinez, Finance ✓
-  "PSR" → Pipeline Status Report ✓
-  "oracle" → (not in hot cache)
+| Type | `CLAUDE.md` | `memory/` |
+|------|-------------|-----------|
+| Person | frequent only | `glossary.md` + `people/{name}.md` |
+| Acronym/term | frequent only | `glossary.md` |
+| Project | active only | `glossary.md` + `projects/{name}.md` |
+| Preference | yes | optional if needed for context |
+| Assumption | no, unless critical | page prose with `Assumption:` |
+| Open question | no, unless critical | page prose with `Open question:` |
+| Historical/stale | no | keep in `memory/` |
 
-memory/glossary.md lookup:
-  "oracle" → Oracle Systems deal ($2.3M) ✓
+## Trust Rules
 
-Now Claude can act with full context.
-```
+- Prefer attributed memory over unattributed memory
+- When possible, note source and observation date
+- Do not silently turn a guess into a fact
+- Preserve uncertainty in wording when confidence is low
 
-### Adding Memory
+Use these labels when helpful:
+- `Confirmed:`
+- `Assumption:`
+- `Preference:`
+- `Open question:`
 
-When user says "remember this" or "X means Y", treat it as an ingest action:
-
-1. **Glossary items** (acronyms, terms, shorthand):
-   - Add to memory/glossary.md
-   - If frequently used, add to CLAUDE.md Quick Glossary
-
-2. **People:**
-   - Create/update memory/people/{name}.md
-   - Add to CLAUDE.md Key People if important
-   - **Capture nicknames** - critical for decoding
-
-3. **Projects:**
-   - Create/update memory/projects/{name}.md
-   - Add to CLAUDE.md Active Projects if current
-   - **Capture codenames** - "Phoenix", "the migration", etc.
-
-4. **Preferences:** Add to CLAUDE.md Preferences section
-
-When memory already exists, prefer enriching the existing wiki pages instead of creating duplicate fragments. Preserve the current structure unless there is a strong reason to expand it.
-
-### Ingest Guidance
-
-- Ingest durable context into `memory/`, not `CLAUDE.md`, unless it is part of the hot cache.
-- Prefer updating an existing person/project/glossary/context page before creating anything new.
-- Keep `CLAUDE.md` short and operational.
-- If ingest materially changes a file under `memory/`, add a short single-line entry to `memory/log.md` with the format `YYYY-MM-DD HH:MM:SS +TZ | tag | path | message`.
-
-### Provenance And Trust Rules
-
-- Prefer attributed memory over unattributed memory.
-- When possible, record where a claim came from, when it was observed, and how certain it is.
-- Do not silently upgrade a guess into a fact.
-- If confidence is low, preserve the uncertainty in the wording.
-
-Use these trust categories when updating memory:
-
-- **Fact** - stable information with clear grounding, such as a confirmed role, project name, date, or explicit statement from a reliable source.
-- **Assumption** - a working interpretation that is useful but not fully confirmed.
-- **Preference** - a user or stakeholder preference, working style, or communication habit.
-- **Open question** - something unresolved that should not be stored as settled truth.
-
-When a page includes uncertain information, prefer labels in the prose such as:
-- `Confirmed:` for high-confidence facts
-- `Assumption:` for working interpretations
-- `Preference:` for behavioral or communication patterns
-- `Open question:` for unresolved items
-
-Provenance can be lightweight. Good sources include:
+Useful source types:
+- direct user instruction
 - task text
 - meeting notes
 - email thread
 - Slack thread
 - calendar context
-- direct user instruction
 
-If a source is not worth storing explicitly, still keep the wording conservative.
+## Contradictions
 
-### Contradiction Handling
+- Do not silently overwrite conflicting claims when both may matter
+- Prefer updating the page with the newest understanding while preserving important prior context
+- If the contradiction affects execution, surface it to the user
+- If the new source is clearly authoritative and the conflict is minor, update directly
 
-- Never silently overwrite a conflicting claim if both the old and new information may matter.
-- Prefer updating the page to show the newest understanding while noting that a prior view existed.
-- If the contradiction is operationally important, surface it to the user.
-- If the conflict is minor and the newer source is clearly authoritative, update the page and keep the wording factual.
+## Compounding Outputs
 
-Example approach:
-- old: `Role: Finance Lead`
-- new conflicting input: `Now acting as Interim CFO`
-- update: note the new role clearly and mention the transition instead of erasing context blindly
+File durable outputs back into memory when they are likely to help again.
 
-### Recalling Memory
-
-When user asks "who is X" or "what does X mean", treat it as a decode/query action:
-
-1. Check CLAUDE.md first
-2. Check `memory/index.md` if the target page is not obvious
-3. Check the most relevant page under `memory/` for full detail
-4. Check `memory/log.md` if recent changes may matter
-5. If not found: "I don't know what X means yet. Can you tell me?"
-
-### Progressive Disclosure
-
-1. Load CLAUDE.md for quick parsing of any request
-2. Dive into memory/ when you need full context for execution
-3. Example: drafting an email to todd about the PSR
-   - CLAUDE.md tells you Todd = Todd Martinez, PSR = Pipeline Status Report
-   - memory/people/todd-martinez.md tells you he prefers Slack, is direct
-
-### Persistent Wiki Mindset
-
-- Treat `memory/` as the durable knowledge layer, not only a fallback lookup table
-- Keep `CLAUDE.md` optimized for speed and frequency, not completeness
-- Prefer enriching existing pages over scattering facts across many small notes
-- Preserve compatibility with current `glossary.md`, `people/`, `projects/`, and `context/`
-- Use `memory/index.md` as the top-level entry point into the persistent wiki layer
-- Use `memory/log.md` to understand recent changes to `memory/` artifacts when relevant
-
-### Query Guidance
-
-- Answer from the compiled wiki layer when possible.
-- Use `CLAUDE.md` for fast disambiguation, then drill into `memory/` for richer context.
-- Prefer synthesized answers that reflect the current state of memory, not isolated fragments.
-- Distinguish confirmed memory from assumptions when answering.
-- Prefer linked pages and typed relationships over scattered mentions when reconstructing context.
-
-### Compounding Outputs
-
-- Durable outputs should compound into the wiki when they are likely to be useful again.
-- Do not file transient chatter, one-off phrasing, or low-signal summaries.
-- Prefer enriching an existing page over creating a new artifact.
-
-Good candidates to file back into memory:
-- meeting syntheses that change project or stakeholder understanding
-- comparisons, recommendations, or decision support likely to be reused
-- recurring unresolved issues or follow-up themes
+Good candidates:
+- meeting syntheses that change understanding
+- reusable comparisons or recommendations
+- recurring unresolved issues
 - clarifications that materially improve a person, project, or term page
 
 Usually do not file:
-- casual back-and-forth with no durable value
-- temporary execution notes that belong only in the current chat
-- duplicate summaries of information already captured well elsewhere
+- casual back-and-forth
+- temporary execution notes
+- duplicate summaries already captured elsewhere
 
 Default filing targets:
-- person-related synthesis → `memory/people/{name}.md`
-- project-related synthesis → `memory/projects/{name}.md`
-- term clarification → `memory/glossary.md`
-- company/team/tool context → `memory/context/*.md`
+- person-related synthesis -> `memory/people/{name}.md`
+- project-related synthesis -> `memory/projects/{name}.md`
+- term clarification -> `memory/glossary.md`
+- company/team/tool context -> `memory/context/*.md`
 
-When deciding whether to file, use this rule of thumb:
-- if the answer would be useful in a future session, store it
-- if it only helps the current turn, leave it in chat
+## Relationships And Related Pages
 
-If a durable answer materially changes a file under `memory/`, add a short entry to `memory/log.md`.
-
-### Lint Guidance
-
-- Flag stale or inconsistent memory, but do not aggressively restructure without a clear reason.
-- Prefer small, targeted cleanup over broad rewrites.
-- Surface gaps clearly when memory is incomplete.
-- Check for claims that need provenance, confidence downgrades, or contradiction notes.
-- Check for missing related-page links and missing relationship labels on important people and projects.
-
-Lint should check for:
-- stale people, project, or context pages
-- orphan pages with weak or no navigational links
-- duplicate entities, aliases, or near-duplicate terms
-- claims missing provenance or trust labeling where needed
-- contradictions between core pages
-- repeated unknown terms that should be promoted into memory
-
-Lint output should be a concise report grouped into:
-- `Fix now` - high-signal issues that will hurt future retrieval
-- `Needs confirmation` - ambiguous merges, contradictions, or uncertain updates
-- `Nice to improve` - weak links, missing related sections, or low-priority cleanup
-
-Default lint behavior:
-- report first, edit second
-- prefer targeted fixes over broad normalization
-- do not merge entities automatically when ambiguity remains
-- ask the user before making meaning-changing cleanup
-
-### Relationship Conventions
-
-Use lightweight typed relationships in page prose when they add retrieval value.
+Use lightweight typed relationships when they improve retrieval.
 
 Preferred labels:
 - `works_on`
@@ -507,79 +153,51 @@ Preferred labels:
 - `collaborates_with`
 
 Rules:
-- Use typed relationships only when they clarify structure or navigation.
-- Prefer a small stable set of labels over inventing synonyms.
-- Add them to the most relevant existing page instead of creating standalone relationship files.
-- When two pages are strongly connected, add at least one explicit cross-link in prose or a related section.
+- Prefer a small stable set of labels
+- Add relationships to the most relevant existing page
+- Important person and project pages should include explicit links in prose or a small `Relationships` or `Related` section
+- Avoid decorative link spam
 
-### Related-Page Conventions
+## Lint Checks
 
-- Important person and project pages should include either explicit links in context sections or a small `Relationships` or `Related` section.
-- Prefer backlinks that help future retrieval, not decorative link spam.
-- When updating a core page, consider whether one or two related pages should also be updated for consistency.
+Check for:
+- stale people, project, or context pages
+- orphan pages with weak navigation
+- duplicate entities or aliases
+- missing provenance where it matters
+- contradictions between core pages
+- repeated unknown terms worth promoting into memory
+- missing relationship or related-page links on important pages
 
-## Bootstrapping
+Group lint output into:
+- `Fix now`
+- `Needs confirmation`
+- `Nice to improve`
 
-Use `/work-start` to initialize by scanning your chat, calendar, email, and documents. A fresh bootstrap should create `CLAUDE.md`, `memory/index.md`, `memory/log.md`, `memory/glossary.md`, and the core `people/`, `projects/`, and `context/` structures.
+## Metadata
 
-## Conventions
+Keep metadata light. Prefer simple prose fields over heavy frontmatter.
 
-- **Bold** terms in CLAUDE.md for scannability
-- Keep CLAUDE.md under ~100 lines (the "hot 30" rule)
-- Filenames: lowercase, hyphens (`todd-martinez.md`, `project-phoenix.md`)
-- Always capture nicknames and alternate names
-- Glossary tables for easy lookup
-- When something's used frequently, promote it to CLAUDE.md
-- When something goes stale, demote it to memory/ only
-- Prefer durable synthesis in `memory/` and concise operational summaries in `CLAUDE.md`
-- Prefer explicit typed relationships on important pages when they improve retrieval
-
-### Metadata Conventions
-
-Keep metadata lightweight and only add it when it improves maintenance or retrieval.
-
-Preferred fields in page prose or simple header blocks:
+Useful fields:
 - `Status`
 - `Type`
 - `Also known as`
 - `Last updated`
-- `Source` or `Sources` when provenance matters
+- `Source` or `Sources`
 
-Rules:
-- Do not add metadata just for symmetry.
-- Prefer human-readable metadata already used by the repo over introducing heavy frontmatter everywhere.
-- Add new metadata fields only when they are likely to be queried, linted, or maintained.
+Only add metadata that will actually help retrieval, linting, or maintenance.
 
-### New Page Types
+## New Page Types
 
-- Keep the core structure centered on `glossary.md`, `people/`, `projects/`, and `context/`.
-- Add new page types only when repeated use justifies them.
-- Prefer extending existing pages before creating new top-level categories.
-- If a new page type is introduced later, add it to `memory/index.md` and keep the naming convention simple.
+- Keep the core structure centered on `glossary.md`, `people/`, `projects/`, and `context/`
+- Add new page types only when repeated use justifies them
+- Add any new page type to `memory/index.md`
 
-## What Goes Where
+## Bootstrapping
 
-| Type | CLAUDE.md (Hot Cache) | memory/ (Persistent Wiki) |
-|------|----------------------|---------------------------|
-| Person | Top ~30 frequent contacts | glossary.md + people/{name}.md |
-| Acronym/term | ~30 most common | glossary.md (complete list) |
-| Project | Active projects only | glossary.md + projects/{name}.md |
-| Nickname | In Key People if top 30 | glossary.md (all nicknames) |
-| Company context | Quick reference only | context/company.md |
-| Preferences | All preferences | - |
-| Assumptions | Only if operationally important | Keep in page prose with clear `Assumption:` labeling |
-| Open questions | Only if critical to near-term execution | Keep in page prose with clear `Open question:` labeling |
-| Historical/stale | ✗ Remove | ✓ Keep in memory/ |
-
-## Promotion / Demotion
-
-**Promote to CLAUDE.md when:**
-- You use a term/person frequently
-- It's part of active work
-
-**Demote to memory/ only when:**
-- Project completed
-- Person no longer frequent contact
-- Term rarely used
-
-This keeps CLAUDE.md fresh and relevant.
+`/work-start` should create:
+- `CLAUDE.md`
+- `memory/index.md`
+- `memory/log.md`
+- `memory/glossary.md`
+- core `people/`, `projects/`, and `context/` structures

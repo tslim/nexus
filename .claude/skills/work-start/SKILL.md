@@ -5,164 +5,107 @@ description: Setup productivity system for work
 
 # Work Start
 
-> If you see unfamiliar placeholders or need to check which skills are available in `.claude/skills`
+Initialize tasks, memory, and the dashboard.
 
-Initialize the task and memory systems, then open the unified dashboard.
+Load `memory-management` and `task-management` before continuing.
 
-Load `memory-management` and `task-management` skill before continuing.
+## Setup Flow
 
-## Instructions
+Check for:
+- `TASKS.md`
+- `CLAUDE.md`
+- `memory/`
+- `memory/index.md`
+- `memory/log.md`
+- `dashboard.html`
 
-### 1. Check What Exists
+Create what is missing:
+- `TASKS.md` -> use the standard task template
+- `dashboard.html` -> copy from `./skills/dashboard.html`
+- if `memory/` exists but `memory/index.md` or `memory/log.md` is missing, create the missing file(s)
 
-Check the working directory for:
-- `TASKS.md` — task list
-- `CLAUDE.md` — working memory
-- `memory/` — persistent wiki directory
-- `memory/index.md` — wiki catalog
-- `memory/log.md` — wiki log
-- `dashboard.html` — the visual UI
+Do not use `open` or `xdg-open`. Tell the user:
+- `Dashboard is ready at dashboard.html. Open it from your file browser to get started.`
 
-### 2. Create What's Missing
+If tasks and memory already exist, stop after orientation:
 
-**If `TASKS.md` doesn't exist:** Create it with the standard template (see task-management skill). Place it in the current working directory.
-
-**If `dashboard.html` doesn't exist:** Copy it from `./skills/dashboard.html` to the current working directory.
-
-**If `CLAUDE.md` and `memory/` don't exist:** This is a fresh setup — after opening the dashboard, begin the memory bootstrap workflow (see below). Place these in the current working directory.
-
-**If `memory/` exists but `memory/index.md` or `memory/log.md` is missing:** Create the missing file(s) using the current memory-management layout.
-
-### 3. Open the Dashboard
-
-Do NOT use `open` or `xdg-open` — in Cowork, the agent runs in a VM and shell open commands won't reach the user's browser. Instead, tell the user: "Dashboard is ready at `dashboard.html`. Open it from your file browser to get started."
-
-### 4. Orient the User
-
-If everything was already initialized:
-```
+```text
 Dashboard open. Your tasks and memory are both loaded.
 - /work-update to sync tasks and check memory
 - /work-update --comprehensive for a deep scan of all activity
 ```
 
-If memory hasn't been bootstrapped yet, continue to step 5.
+## First-Run Bootstrap
 
-### 5. Bootstrap Memory (First Run Only)
+Only do this if `CLAUDE.md` and `memory/` do not exist yet.
 
-Only do this if `CLAUDE.md` and `memory/` don't exist yet.
+Ask where the user's task list lives:
 
-The best source of workplace language is the user's actual task list. Real tasks = real shorthand.
-
-**Ask the user:**
-```
-Where do you keep your todos or task list? This could be:
-- A local file (e.g., TASKS.md, todo.txt)
-- An app (e.g. Asana, Linear, Jira, Notion, Todoist)
+```text
+Where do you keep your todos or task list?
+- A local file
+- An app like Asana, Linear, Jira, Notion, or Todoist
 - A notes file
 
 I'll use your tasks to learn your workplace shorthand.
 ```
 
-**Once you have access to the task list:**
+From the task list:
+- identify names, acronyms, project references, and internal terms
+- ask only about terms you cannot decode already
+- capture nicknames carefully
 
-For each task item, analyze it for potential shorthand:
-- Names that might be nicknames
-- Acronyms or abbreviations
-- Project references or codenames
-- Internal terms or jargon
+Example:
 
-**For each item, decode it interactively:**
-
-```
+```text
 Task: "Send PSR to Todd re: Phoenix blockers"
 
-I see some terms I want to make sure I understand:
-
-1. **PSR** - What does this stand for?
-2. **Todd** - Who is Todd? (full name, role)
-3. **Phoenix** - Is this a project codename? What's it about?
+I want to confirm:
+1. PSR - what does it stand for?
+2. Todd - who is Todd?
+3. Phoenix - is this a project codename?
 ```
 
-Continue through each task, asking only about terms you haven't already decoded.
+## Optional Comprehensive Scan
 
-### 6. Optional Comprehensive Scan
+Offer a deeper scan of:
+- chat
+- email
+- documents
+- calendar
 
-After task list decoding, offer:
-```
-Do you want me to do a comprehensive scan of your messages, emails, and documents?
-This takes longer but builds much richer context about the people, projects, and terms in your work.
+Present findings grouped into:
+- `Ready to add`
+- `Needs clarification`
+- `Low confidence`
 
-Or we can stick with what we have and add context later.
-```
+## Bootstrap Outputs
 
-**If they choose comprehensive scan:**
+Create:
+- `CLAUDE.md`
+- `memory/index.md`
+- `memory/log.md`
+- `memory/glossary.md`
+- `memory/people/{name}.md`
+- `memory/projects/{name}.md`
+- `memory/context/company.md`
 
-Gather data from available MCP sources:
-- **Chat:** Recent messages, channels, DMs
-- **Email:** Sent messages, recipients
-- **Documents:** Recent docs, collaborators
-- **Calendar:** Meetings, attendees
+`memory/log.md` should use the append-only format defined by `memory-management`.
 
-Build a braindump of people, projects, and terms found. Present findings grouped by confidence:
-- **Ready to add** (high confidence) — offer to add directly
-- **Needs clarification** — ask the user
-- **Low frequency / unclear** — note for later
+## Report
 
-### 7. Write Memory Files
-
-From everything gathered, create:
-
-**CLAUDE.md** (working memory, ~50-80 lines):
-```markdown
-# Memory
-
-## Me
-[Name], [Role] on [Team].
-
-## People
-| Who | Role |
-|-----|------|
-| **[Nickname]** | [Full Name], [role] |
-
-## Terms
-| Term | Meaning |
-|------|---------|
-| [acronym] | [expansion] |
-
-## Projects
-| Name | What |
-|------|------|
-| **[Codename]** | [description] |
-
-## Preferences
-- [preferences discovered]
-```
-
-**memory/** directory:
-- `memory/index.md` — top-level catalog of the persistent wiki
-- `memory/log.md` — chronological record of notable memory changes
-- `memory/glossary.md` — full decoder ring (acronyms, terms, nicknames, codenames)
-- `memory/people/{name}.md` — individual profiles
-- `memory/projects/{name}.md` — project details
-- `memory/context/company.md` — teams, tools, processes
-
-### 8. Report Results
-
-```
+```text
 Productivity system ready:
 - Tasks: TASKS.md (X items)
 - Memory: X people, X terms, X projects
-- Wiki primitives: `memory/index.md`, `memory/log.md`
+- Wiki primitives: memory/index.md, memory/log.md
 - Dashboard: open in browser
 
-Use /work-update to keep things current (add --comprehensive for a deep scan).
+Use /work-update to keep things current.
 ```
 
 ## Notes
 
-- If memory is already initialized, this just opens the dashboard
 - If memory is partially initialized, create missing core files to match the current layout
-- Nicknames are critical — always capture how people are actually referred to
-- If a source isn't available, skip it and note the gap
-- Memory grows organically through natural conversation after bootstrap
+- Skip unavailable sources and note the gap
+- Memory grows organically after bootstrap
