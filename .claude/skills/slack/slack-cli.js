@@ -227,29 +227,35 @@ async function openDirectMessage(userId) {
   return resp.channel.id;
 }
 
-function messagesToRows(channelId, messages) {
-  return (messages || []).map((m) => ({
-    channel_id: channelId,
-    ts: m.ts,
-    time: tsToLocal(m.ts),
-    user_id: m.user || null,
-    bot_id: m.bot_id || null,
-    text: m.text || "",
-    thread_ts: m.thread_ts || null,
-    reply_count: m.reply_count || 0,
-    has_files: !!(m.files && m.files.length),
-    files: (m.files || []).map((f) => ({
-      id: f.id,
-      name: f.name,
-      size: f.size,
-    })),
-  }));
+function messagesToRows(channelId, messages, userMap = {}) {
+  return (messages || []).map((m) => {
+    const userId = m.user || null;
+    const userInfo = userId ? userMap[userId] : null;
+    return {
+      channel_id: channelId,
+      ts: m.ts,
+      time: tsToLocal(m.ts),
+      user_id: userId,
+      user_name: userInfo?.display_name || userInfo?.real_name || userInfo?.username || null,
+      bot_id: m.bot_id || null,
+      text: m.text || "",
+      thread_ts: m.thread_ts || null,
+      reply_count: m.reply_count || 0,
+      has_files: !!(m.files && m.files.length),
+      files: (m.files || []).map((f) => ({
+        id: f.id,
+        name: f.name,
+        size: f.size,
+      })),
+    };
+  });
 }
 
 function printHumanMessages(rows, showChannel = false) {
   rows.forEach((row) => {
     const prefix = showChannel ? `[${row.channel_id}] ` : "";
-    console.log(`${prefix}[${row.time}] ${compactText(row.text, 260)}`);
+    const userDisplay = row.user_name || row.user_id || "unknown";
+    console.log(`${prefix}[${row.time}] ${userDisplay}: ${compactText(row.text, 260)}`);
     if (row.reply_count) {
       console.log(`  replies=${row.reply_count}`);
     }
@@ -300,7 +306,17 @@ const commands = {
       inclusive: flags.inclusive === true,
     });
 
-    const rows = messagesToRows(channelId, messages);
+    // Resolve user IDs to names
+    const userIds = [...new Set(messages.map((m) => m.user).filter(Boolean))];
+    const userMap = {};
+    if (userIds.length > 0) {
+      const users = await resolveUsers(userIds);
+      for (const u of users) {
+        userMap[u.user_id] = u;
+      }
+    }
+
+    const rows = messagesToRows(channelId, messages, userMap);
     if (flags.json) {
       printResult(
         { channel_id: channelId, count: rows.length, messages: rows },
