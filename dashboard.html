@@ -3205,10 +3205,17 @@
         }
 
         let preview = '';
-        for (const [sectionName, sectionContent] of Object.entries(p.sections)) {
-          if (sectionContent && sectionName !== '_intro') {
-            preview = getPreview(sectionContent, 100);
-            break;
+        // First try _intro section (file description/overview)
+        if (p.sections['_intro']) {
+          preview = getPreview(p.sections['_intro'], 100);
+        }
+        // Fall back to other sections
+        if (!preview) {
+          for (const [sectionName, sectionContent] of Object.entries(p.sections)) {
+            if (sectionContent && sectionName !== '_intro') {
+              preview = getPreview(sectionContent, 100);
+              break;
+            }
           }
         }
         if (!preview) preview = getPreview(p.rawContent, 100);
