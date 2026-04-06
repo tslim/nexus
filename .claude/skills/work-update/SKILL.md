@@ -5,6 +5,8 @@ description: Sync work context from external sources, update tasks and memory, a
 
 # Work Update
 
+> If you see unfamiliar placeholders or need to check which skills are available in `.claude/skills`
+
 Load `memory-management` and `task-management` before continuing.
 
 ## Flow

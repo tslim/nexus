@@ -5,6 +5,8 @@ description: Setup productivity system for work
 
 # Work Start
 
+> If you see unfamiliar placeholders or need to check which skills are available in `.claude/skills`
+
 Initialize tasks, memory, and the dashboard.
 
 Load `memory-management` and `task-management` before continuing.
