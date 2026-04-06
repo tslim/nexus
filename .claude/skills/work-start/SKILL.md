@@ -18,7 +18,9 @@ Load `memory-management` and `task-management` skill before continuing.
 Check the working directory for:
 - `TASKS.md` — task list
 - `CLAUDE.md` — working memory
-- `memory/` — deep memory directory
+- `memory/` — persistent wiki directory
+- `memory/index.md` — wiki catalog
+- `memory/log.md` — wiki log
 - `dashboard.html` — the visual UI
 
 ### 2. Create What's Missing
@@ -28,6 +30,8 @@ Check the working directory for:
 **If `dashboard.html` doesn't exist:** Copy it from `./skills/dashboard.html` to the current working directory.
 
 **If `CLAUDE.md` and `memory/` don't exist:** This is a fresh setup — after opening the dashboard, begin the memory bootstrap workflow (see below). Place these in the current working directory.
+
+**If `memory/` exists but `memory/index.md` or `memory/log.md` is missing:** Create the missing file(s) using the current memory-management layout.
 
 ### 3. Open the Dashboard
 
@@ -136,6 +140,8 @@ From everything gathered, create:
 ```
 
 **memory/** directory:
+- `memory/index.md` — top-level catalog of the persistent wiki
+- `memory/log.md` — chronological record of notable memory changes
 - `memory/glossary.md` — full decoder ring (acronyms, terms, nicknames, codenames)
 - `memory/people/{name}.md` — individual profiles
 - `memory/projects/{name}.md` — project details
@@ -147,6 +153,7 @@ From everything gathered, create:
 Productivity system ready:
 - Tasks: TASKS.md (X items)
 - Memory: X people, X terms, X projects
+- Wiki primitives: `memory/index.md`, `memory/log.md`
 - Dashboard: open in browser
 
 Use /work-update to keep things current (add --comprehensive for a deep scan).
@@ -155,6 +162,7 @@ Use /work-update to keep things current (add --comprehensive for a deep scan).
 ## Notes
 
 - If memory is already initialized, this just opens the dashboard
+- If memory is partially initialized, create missing core files to match the current layout
 - Nicknames are critical — always capture how people are actually referred to
 - If a source isn't available, skip it and note the gap
 - Memory grows organically through natural conversation after bootstrap

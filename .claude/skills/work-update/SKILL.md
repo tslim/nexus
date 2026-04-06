@@ -77,6 +77,12 @@ From your activity, these look like todos you haven't captured:
 
 Let user pick which to add.
 
+Alongside possible missing tasks, note any durable memory-enrichment candidates surfaced by the same activity.
+Examples:
+- a repeated stakeholder not yet in `memory/people/`
+- a recurring project/topic not yet in `memory/projects/` or `memory/glossary.md`
+- a durable relationship, status change, or ownership note worth adding to an existing memory page
+
 ### 5. Triage Stale Items
 
 Review Active tasks in TASKS.md and flag:
@@ -121,7 +127,7 @@ Surface new entities not in memory:
 - **Horizon project** — No mentions in 30 days. Mark completed?
 ```
 
-Present grouped by confidence. High-confidence items offered to add directly; low-confidence items asked about.
+Present grouped by confidence. High-confidence enrichments to existing memory pages can be recommended directly, but major new memories should still be confirmed by the user before adding.
 
 ### 8. Fill Gaps
 
@@ -138,6 +144,8 @@ I found terms in your tasks I don't have context for:
 
 Add answers to the appropriate memory files (people/, projects/, glossary.md).
 
+Prefer filling existing pages over creating new ones. Only create a new memory page when the entity or topic is clearly durable and likely to recur.
+
 ### 9. Capture Enrichment
 
 Tasks often contain richer context than memory. Extract and update:
@@ -145,6 +153,21 @@ Tasks often contain richer context than memory. Extract and update:
 - **Status changes** ("launch done") → update project status, demote from CLAUDE.md
 - **Relationships** ("Todd's sign-off on Maya's proposal") → cross-reference people
 - **Deadlines** → add to project files
+
+Use this default policy:
+- Safe enrichments to existing `memory/` pages may be applied during `work-update`
+- Major new memory additions should be proposed first and confirmed by the user
+- If uncertain whether something is durable, present it as a suggestion instead of editing memory directly
+
+Examples of safe enrichments:
+- adding a newly observed link to an existing project page
+- updating an existing project status from a clear meeting outcome
+- adding a relationship or collaborator mention to an existing person or project page
+
+Examples that still need confirmation:
+- creating a brand new person page
+- creating a brand new project page
+- promoting a weakly supported term into `CLAUDE.md`
 
 ### 10. Report
 
@@ -154,6 +177,11 @@ Update complete:
 - Memory: 2 gaps filled, 1 project enriched
 - All tasks decoded ✓
 ```
+
+If memory was enriched, report whether the change was:
+- a safe update to an existing page
+- a suggested but unconfirmed new memory
+- a gap that still needs user clarification
 
 ### 11. Memory Backup
 
@@ -169,6 +197,7 @@ Only trigger the backup if files were actually changed. If nothing changed in ta
 ## Notes
 
 - Never auto-add tasks or memories without user confirmation
+- Safe enrichments to existing memory pages are allowed during `work-update`; net-new memory entities still require confirmation
 - External source links are preserved when available
 - Fuzzy matching on task titles handles minor wording differences
 - Safe to run frequently — only updates when there's new info
