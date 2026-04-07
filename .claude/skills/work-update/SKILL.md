@@ -50,28 +50,20 @@ Review active tasks for:
 
 Present triage options like done, reschedule, or move to someday.
 
-### 6. Decode task gaps
-For each task, try to decode people, projects, acronyms, tools, and links.
+### 6. Query unresolved gaps
+For each task or activity item, use the memory query workflow to resolve people, projects, acronyms, tools, and links.
 Track what is known and what still needs clarification.
+Ask about unknown terms or people only when the lookup order does not resolve them.
 
-### 7. Suggest memory updates
+### 7. Ingest durable updates
 Group findings into:
 - new people
 - new projects or topics
 - cleanup suggestions
 
-Policy:
-- safe enrichments to existing `memory/` pages may be applied during `work-update`
-- major new memory additions must be confirmed first
-- if durability is unclear, present a suggestion instead of editing memory
-
-### 8. Fill memory gaps
-Ask about unknown terms or people.
-
 Prefer updating existing pages.
-Only create a new memory page when the entity is clearly durable and likely to recur.
+Only create a new memory page when the entity is clearly durable and likely to recur, and only after confirmation.
 
-### 9. Capture enrichment
 Useful enrichments include:
 - links added to existing project or person pages
 - clear status changes
@@ -90,7 +82,12 @@ Still require confirmation:
 
 If `work-update` materially changes a file under `memory/`, append a log entry to `memory/log.md` using the standard format.
 
-### 10. Report
+Policy:
+- safe enrichments to existing `memory/` pages may be applied during `work-update`
+- major new memory additions must be confirmed first
+- if durability is unclear, present a suggestion instead of editing memory
+
+### 8. Report
 Summarize:
 - task changes
 - memory changes
@@ -101,7 +98,7 @@ If memory changed, say whether it was:
 - a suggested but unconfirmed new memory
 - a gap that still needs clarification
 
-### 11. Memory backup
+### 9. Memory backup
 If this run changed `CLAUDE.md`, `TASKS.md`, or anything under `memory/`, trigger `memory-backup`.
 
 ## Notes
