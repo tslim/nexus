@@ -10,9 +10,9 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 ## How It Works
 
 - `work-start` bootstraps and generates `CLAUDE.md` + `memory/` when missing.
-- `work-update` keeps tasks and memory current through interactive sync.
+- `work-update` keeps tasks and memory current through interactive sync, using memory query for decoding and memory ingest for durable updates.
 - `task-management` defines how `TASKS.md` is structured and updated.
-- `memory-management` defines what belongs in hot memory vs deep memory.
+- `memory-management` defines what belongs in hot memory vs deep memory, plus the core `ingest`, `query`, and `lint` workflows.
 
 ## Skills in This Repo
 
@@ -21,10 +21,10 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 | Skill | Purpose |
 |---|---|
 | `work-start` | First-run initializer: checks/creates `TASKS.md`, ensures dashboard setup, and bootstraps memory (`CLAUDE.md` + `memory/`). |
-| `work-update` | Main ongoing sync flow for tasks + memory gaps, stale task triage, and context enrichment. |
+| `work-update` | Main ongoing sync flow for tasks + memory gaps, stale task triage, and context enrichment. Uses memory query for lookup/decoding and memory ingest for durable filing. |
 | `daily-sync` | Collects your 3 standup answers and posts them to the current team daily thread in Slack. |
 | `task-management` | Task conventions for `TASKS.md` (active, waiting, someday, done) and task update behavior. |
-| `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base. |
+| `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base, with explicit `ingest`, `query`, and `lint` workflows. |
 | `memory-backup` | Backs up `CLAUDE.md`, `TASKS.md`, and `memory/` to a separate private Git repo clone. |
 
 ### External source readers
