@@ -5,335 +5,261 @@ description: Hot-cache plus persistent wiki memory system. CLAUDE.md handles fas
 
 # Memory Management
 
-Use a two-layer memory system:
+Build and maintain a persistent, compounding markdown wiki in `memory/`, with `CLAUDE.md` as a hot cache for fast operational decoding. Keep `CLAUDE.md` lean. It is the hot cache for frequent operational decoding, not the durable wiki.
+
+Unlike chat-only memory, this system keeps durable context current over time. `CLAUDE.md` is for frequent people, terms, projects, and preferences. `memory/` is the durable wiki for richer, longer-lived knowledge.
+
+The wiki is plain markdown and can be read in any editor.
+
+## Architecture
 
 ```text
-CLAUDE.md          <- Hot cache (~30 people, terms, projects). Lightweight, fast.
-memory/            <- Durable wiki. Unlimited scale.
-  index.md         <- Top-level catalog
-  log.md           <- Append-only log of changes
-  glossary.md      <- Full decoder ring
-  people/          <- Person pages
-  projects/        <- Project pages
-  context/         <- Company context (tools, channels, processes, teams)
-  topics/          <- Thematic notes and reference collections
+CLAUDE.md          <- Hot cache for frequent people, terms, projects, and preferences
+memory/
+├── SCHEMA.md      <- Structure rules and page conventions
+├── index.md       <- Content catalog for the durable wiki
+├── log.md         <- Chronological action log
+├── glossary.md    <- Decoder ring for acronyms, shorthand, names, and projects
+├── people/        <- Person pages
+├── projects/      <- Project and workstream pages
+├── context/       <- Shared organizational context
+├── topics/        <- Thematic notes and reference collections
+├── comparisons/   <- Side-by-side analyses worth keeping
+└── queries/       <- Filed query results worth keeping
 ```
 
-**CLAUDE.md is hot memory** - keep it compact (50-100 lines), storing only frequent people, active projects, and common terms. It should cover 90% of daily decoding needs. Durable detail goes in `memory/`.
+## Schema
 
-## Memory Types
+`memory/SCHEMA.md` is the source of truth for wiki structure and conventions.
 
-| Type | `CLAUDE.md` (Hot) | `memory/` (Durable) |
-|------|-------------------|---------------------|
-| Person | Frequent contacts only (~30) | `glossary.md` + `people/{name}.md` |
-| Acronym/term | Common only (~30) | `glossary.md` (complete) |
-| Project | Active only | `glossary.md` + `projects/{name}.md` |
-| Topic | No | `topics/{name}.md` |
-| Preference | All preferences | Optional context |
-| Assumption | Critical only | Page prose with `Assumption:` |
-| Open question | Critical only | Page prose with `Open question:` |
-| Historical/stale | No - demote to memory/ only | Yes - keep in `memory/` |
+Follow it when creating or updating durable wiki pages:
+- page types
+- naming
+- frontmatter
+- linking
+- indexing
+- page structure expectations
 
-**Promotion/Demotion:** Move items to CLAUDE.md when frequently used. Demote to memory/ only when stale or rarely needed.
+Do not duplicate schema rules in this skill unless needed for execution workflow.
 
-## Core Workflows
+## Reference Templates
 
-### Ingest
-For durable new information: meetings, project updates, decisions, recurring threads, or explicit "remember this."
-
-- Update existing pages first
-- Put durable detail in `memory/`; keep `CLAUDE.md` lean
-- Log material changes to `memory/log.md`
-- When creating new pages, update `memory/index.md` to keep the catalog current
-
-### Query
-For any question requiring memory lookup.
-
-**Lookup Order (automatic decoding):**
-1. Check `CLAUDE.md` (hot cache - covers 90% of cases)
-2. Check `memory/index.md`
-3. Check `memory/glossary.md`
-4. Check the most relevant page under `memory/`
-5. Check `memory/log.md` if recent changes matter
-6. Ask the user if still unknown
-
-**Two-Output Rule:**
-Every query produces two outputs: (1) the answer, and (2) memory updates.
-
-1. Decode shorthand/acronyms via lookup order above
-2. Answer from the wiki, not only from recent chat
-3. File durable synthesis back to memory before or alongside delivering the answer
-4. Ask before creating new pages from query synthesis
-
-**Syntheses Format:**
-Add query outputs to a `## Syntheses` section on relevant pages:
+### `memory/SCHEMA.md`
 
 ```markdown
-## Syntheses
+# Memory Schema
 
-### YYYY-MM-DD: Brief topic label
-**Query:** [The original question]
-**Insight:** [The synthesized answer]
-**Related:** [Links to relevant people/projects/terms]
+## Domain
+[What this wiki covers]
+
+## Conventions
+- File names: lowercase, hyphens, no spaces
+- New durable pages start with YAML frontmatter:
+  ```yaml
+  ---
+  title: Page Title
+  created: YYYY-MM-DD
+  updated: YYYY-MM-DD
+  type: person | project | context | topic | comparison | query | glossary
+  tags: [tag1, tag2]
+  sources: []
+  ---
+  ```
+- Use `[[wikilinks]]` for new links between wiki pages
+- When updating a page, always bump the `updated` date
+- Every new page must be added to `index.md`
+- Every material change must be appended to `log.md`
+
+## People Pages
+One page per recurring collaborator or stakeholder. Include:
+- Overview / role
+- Key facts or identifiers when useful
+- Relationships to projects, teams, or people
+- Durable notes only
+
+## Project Pages
+One page per project or workstream. Include:
+- Status and type
+- What it is
+- Key people
+- Current threads, recent activity, or important decisions
+- Relationships and relevant references
+
+## Context Pages
+Shared organizational reference pages. Include:
+- Teams and workstreams
+- Tools and systems
+- Channels
+- Processes and operating norms
+
+## Topic Pages
+One page per thematic note or reference collection. Include:
+- Definition or framing
+- Current state of knowledge
+- Links, references, or observations
+- Related pages
+
+## Comparison Pages
+Side-by-side analyses. Include:
+- What is being compared and why
+- Dimensions of comparison (table preferred)
+- Verdict or synthesis
+- Sources
+
+## Query Pages
+Filed query results worth keeping. Include:
+- Original question
+- Synthesized answer
+- Scope or assumptions
+- Related pages
+- Sources
+
+## Glossary
+Central decoder ring for acronyms, internal terms, people, and project references.
 ```
 
-Rules:
-- Append new syntheses for historical queries
-- Update existing syntheses when replacing stale status (add brief history note)
-- Always ask before creating a new page from query synthesis
-- Log all synthesis additions to `memory/log.md`
+### `memory/index.md`
 
-### Lint
-For reviewing memory quality.
-
-- Report first, edit second
-- Prefer targeted cleanup over broad rewrites
-- Group findings into: `Fix now`, `Needs confirmation`, `Nice to improve`
-
-## File Reference
-
-### Templates
-
-**CLAUDE.md** (Hot Cache - keep under 100 lines):
 ```markdown
-# Memory
+# Memory Index
 
-## Me
-[Name], [Role] on [Team]. [One sentence about what I do.]
+> Content catalog for the durable wiki under `memory/`.
+> Read this first to find relevant files for any memory-backed query.
+
+## Glossary
+- [Glossary](glossary.md) - Decoder ring for acronyms, shorthand, names, and project references.
 
 ## People
-| Who | Role |
-|-----|------|
-| **Todd** | Todd Martinez, Finance lead |
-| **Sarah** | Sarah Chen, Engineering |
-→ Full list: memory/glossary.md, profiles: memory/people/
-
-## Terms
-| Term | Meaning |
-|------|---------|
-| PSR | Pipeline Status Report |
-| P0 | Drop everything priority |
-→ Full glossary: memory/glossary.md
+<!-- people pages listed here -->
 
 ## Projects
-| Name | What |
-|------|------|
-| **Phoenix** | DB migration, Q2 launch |
-→ Details: memory/projects/
-
-## Preferences
-- 25-min meetings with buffers
-- Async-first, Slack over email
-```
-
-**memory/glossary.md:**
-```markdown
-# Glossary
-
-## Acronyms
-| Term | Meaning | Context |
-|------|---------|---------|
-| PSR | Pipeline Status Report | Weekly sales doc |
-
-## Internal Terms
-| Term | Meaning |
-|------|---------|
-| standup | Daily 9am sync |
-
-## People
-| Name | Profile |
-|------|---------|
-| Todd Martinez | [Profile](people/todd-martinez.md) |
-
-## Projects
-| Name | Reference |
-|------|-----------|
-| Phoenix | [Project](projects/phoenix.md) |
-```
-
-**memory/people/{name}.md:**
-```markdown
-# Todd Martinez
-
-**Also known as:** Todd, T
-**Role:** Finance Lead
-**Team:** Finance
+<!-- project pages listed here -->
 
 ## Context
-- Handles all PSRs and financial reporting
-- Works closely with [Sales team](../context/company.md)
+<!-- context pages listed here -->
 
-## Relationships
-- works_on: [Project Phoenix](../projects/phoenix.md)
-- reports_to: CFO
+## Topics
+<!-- topic pages listed here -->
 
-## Notes
-- Cubs fan, likes talking baseball
+## Comparisons
+<!-- comparison pages listed here -->
+
+## Queries
+<!-- filed query results listed here -->
+
+## Core Files
+- [SCHEMA.md](SCHEMA.md) - Structural rules for the durable wiki.
+- [log.md](log.md) - Chronological record of notable memory-system changes.
 ```
 
-**memory/projects/{name}.md:**
+### `memory/log.md`
+
 ```markdown
-# Project Phoenix
+# Memory Log
 
-**Status:** Active
-**Type:** Infrastructure migration
+> Chronological record of all memory actions. Append-only.
+> Format: `## [YYYY-MM-DD] action | subject`
 
-**Also called:** "the migration"
-
-## What It Is
-Database migration from legacy Oracle to PostgreSQL.
-
-## Key People
-- [Sarah](../people/sarah-chen.md) - tech lead
-- [Todd](../people/todd-martinez.md) - budget owner
-
-## Context
-$1.2M budget, 6-month timeline.
-
-## Syntheses
-### YYYY-MM-DD: Brief topic
-**Query:** [Question]
-**Insight:** [Answer]
-**Related:** [Links]
+## [YYYY-MM-DD] create | Memory initialized
+- Created `SCHEMA.md`, `index.md`, and `log.md`
 ```
 
-**memory/log.md:**
-- Format: `YYYY-MM-DD HH:MM:SS +TZ | tag | path | message`
-- Append-only, monotonic timestamps
-- Log only material changes to files under `memory/`
+## Core Operations
 
-**memory/context/company.md:**
-```markdown
-# Company Context
+### 1. Ingest
 
-Organizational structure, tools, channels, and processes.
+When the user provides durable information such as project updates, decisions, recurring threads, meeting context, or explicit "remember this" instructions:
 
-## Teams and Workstreams
+1. Read `memory/index.md` to identify likely target pages.
+2. Read the relevant existing pages before making changes.
+3. Update existing pages first when the information fits naturally.
+4. Create a new page only when the information does not fit an existing page cleanly.
+5. Follow `memory/SCHEMA.md` for page structure and conventions.
+6. Add meaningful cross-references with `[[wikilinks]]` when creating new links.
+7. Update `memory/index.md` for every new, renamed, deleted, or reclassified page.
+8. Append the action to `memory/log.md`.
+9. Report which files were created or updated.
 
-| Track | What it covers | Key collaborators |
-|-------|----------------|-------------------|
-| Solutions | Daily delivery sync | [John](../people/john.md) |
-| [Project X](../projects/x.md) | Description | [Person](../people/person.md) |
+Guidelines:
+- Put durable detail in `memory/`.
+- Prefer targeted updates over broad rewrites.
+- Ask before mass-updating if the ingest would touch 10 or more existing pages.
 
-## Tools and Systems
+### 2. Query
 
-| Category | Tool | Used for | Notes |
-|----------|------|----------|-------|
-| Core | Slack | Communication | Primary real-time |
-| Dev | Framework X | App development | Core stack |
+When the user asks a question that depends on stored memory:
 
-## Communication Channels
+1. Read `CLAUDE.md` for fast decoding.
+2. Read `memory/index.md` to identify relevant pages.
+3. Read `memory/glossary.md` if term or shorthand decoding is needed.
+4. Read the most relevant durable wiki pages.
+5. Synthesize the answer from the compiled wiki, not only the current chat.
+6. File valuable outputs back into memory when they are likely to help again.
+7. Append the action to `memory/log.md` when the query produces a durable memory update.
 
-| Type | Channel | Purpose |
-|------|---------|---------|
-| Slack | `#team` | Daily standup |
-| DM | `Leadership` | Exec coordination |
+Preferred filing targets:
+- person-specific durable update -> relevant `memory/people/` page
+- project-specific durable update -> relevant `memory/projects/` page
+- company, process, tool, or channel context -> relevant `memory/context/` page
+- thematic reference collection -> relevant `memory/topics/` page
+- reusable side-by-side analysis -> `memory/comparisons/`
+- reusable standalone synthesized answer -> `memory/queries/`
+- term clarification -> `memory/glossary.md`
 
-## Processes and Workflows
+Guidelines:
+- Simple factual lookups do not always require a durable write-back.
+- Substantial comparisons, status snapshots, and cross-source syntheses usually should be preserved.
+- Ask before creating a brand new page when the filing value is uncertain.
 
-| Category | Process | Cadence | Purpose |
-|----------|---------|---------|---------|
-| Delivery | UAT loop | Per cycle | Validation |
-| Meeting | Standup | Daily | Team sync |
-```
+### 3. Lint
 
-### Link Format (CRITICAL)
+When the user asks to lint, health-check, or audit the memory wiki:
 
-| Writing in | Link to people | Link to projects |
-|-----------|---------------|-----------------|
-| `CLAUDE.md` or `TASKS.md` | `[Name](memory/people/name.md)` | `[Project](memory/projects/file.md)` |
-| `memory/glossary.md` | `[Name](people/name.md)` | `[Project](projects/file.md)` |
-| `memory/people/*.md` | `[Other person](othername.md)` | `[Project](../projects/file.md)` |
-| `memory/projects/*.md` | `[Person](../people/name.md)` | — |
+1. Scan for contradictions across related pages.
+2. Find orphan or weakly linked pages.
+3. Check for stale content in important pages.
+4. Identify missing dedicated pages for repeatedly referenced people, projects, terms, or topics.
+5. Verify that every durable page appears in `memory/index.md`.
+6. Verify that new durable pages follow `memory/SCHEMA.md`.
+7. Report findings first with specific file paths and suggested actions.
+8. Append the lint action to `memory/log.md` if changes were made or findings were formally recorded.
 
-## Writing Guidelines
+Group findings into:
+- Fix now
+- Needs confirmation
+- Nice to improve
 
-### Trust Rules
-- Prefer attributed memory over unattributed memory
-- When possible, note source and observation date
-- Do not silently turn a guess into a fact
-- Preserve uncertainty in wording when confidence is low
+## Working With The Wiki
 
-**Use these labels when helpful:**
-- `Confirmed:`
-- `Assumption:`
-- `Preference:`
-- `Open question:`
+### Searching
 
-**Useful source types:** direct user instruction, task text, meeting notes, email thread, Slack thread, calendar context
+Use this lookup order by default:
+1. `CLAUDE.md`
+2. `memory/index.md`
+3. `memory/glossary.md`
+4. relevant pages under `memory/`
+5. `memory/log.md` if recent changes matter
 
-### Contradictions
-- Do not silently overwrite conflicting claims when both may matter
-- Prefer updating the page with the newest understanding while preserving important prior context
-- If the contradiction affects execution, surface it to the user
-- If the new source is clearly authoritative and the conflict is minor, update directly
+For larger memory lookups:
+- search `memory/` by filename to find candidate pages
+- search markdown content when the relevant page is unclear
+- use `memory/index.md` as the navigation layer, not as a substitute for reading source pages
 
-### Relationships and Related Pages
-Use lightweight typed relationships when they improve retrieval.
+### Batch Updates
 
-**Preferred labels:** `works_on`, `reports_to`, `owns`, `blocks`, `depends_on`, `contradicts`, `collaborates_with`
+When multiple related updates arrive at once:
+- read all relevant pages first
+- identify overlapping people, projects, and topics
+- update pages in one pass to avoid redundant edits
+- update `memory/index.md` once at the end
+- append the corresponding actions to `memory/log.md`
 
-**Rules:**
-- Prefer a small stable set of labels
-- Add relationships to the most relevant existing page
-- Important pages should include explicit links in prose or a small `Relationships` or `Related` section
-- Avoid decorative link spam
+## Pitfalls
 
-### Metadata
-Keep metadata light. Prefer simple prose fields over heavy frontmatter.
-
-**Useful fields:** `Status`, `Type`, `Also known as`, `Last updated`, `Source` or `Sources`
-
-Only add metadata that will actually help retrieval, linting, or maintenance.
-
-## Compounding Outputs
-
-File durable outputs back into memory when they are likely to help again.
-
-**Good candidates:**
-- Meeting syntheses that change understanding
-- Reusable comparisons or recommendations
-- Recurring unresolved issues
-- Clarifications that materially improve a person, project, or term page
-- Query answers that synthesize across multiple sources
-
-**Usually do not file:**
-- Casual back-and-forth
-- Temporary execution notes
-- Duplicate summaries already captured elsewhere
-- Simple lookups with no synthesis
-
-**Default filing targets:**
-- Person-related synthesis → `memory/people/{name}.md`
-- Project-related synthesis → `memory/projects/{name}.md`
-- Term clarification → `memory/glossary.md`
-- Company/team/tool context → `memory/context/*.md`
-- Thematic references or grouped research → `memory/topics/{name}.md`
-- Cross-cutting synthesis → ask user whether to create new page
-
-## Lint Checks
-
-Check for:
-- Stale people, project, or context pages
-- Orphan pages with weak navigation
-- Duplicate entities or aliases
-- Missing provenance where it matters
-- Contradictions between core pages
-- Repeated unknown terms worth promoting into memory
-- Missing relationship or related-page links on important pages
-- `memory/index.md` missing entries for existing pages
-
-## New Page Types
-
-- Keep the core structure centered on `glossary.md`, `people/`, `projects/`, `context/`, and `topics/`
-- Add new page types only when repeated use justifies them
-- Add any new page type to `memory/index.md`
-
-## Bootstrapping
-
-`/work-start` creates:
-- `CLAUDE.md`
-- `memory/index.md`
-- `memory/log.md`
-- `memory/glossary.md`
-- Core `people/`, `projects/`, `context/`, and `topics/` structures
+- Do not skip `memory/index.md` and `memory/log.md` updates.
+- Do not create duplicate pages when an existing page should be updated.
+- Do not create isolated pages without meaningful cross-references.
+- Do not let `CLAUDE.md` grow into the durable wiki.
+- Do not silently replace conflicting claims when the conflict affects execution.
+- Do not ignore `memory/SCHEMA.md` when creating new pages.
+- Do not file casual chat or temporary execution notes as durable memory.

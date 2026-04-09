@@ -34,7 +34,7 @@ On first task interaction:
 
 ## Task Format
 
-- Task: `- [ ] **Task title** - [Project](memory/projects/file.md) link, Note with [Person](memory/people/name.md) link _(added YYYY-MM-DD)_`
+- Task: `- [ ] **Task title** - [[Project X]], follow up with [[John Doe]] _(added YYYY-MM-DD)_`
 - Executable subtask: `  - [ ] Sub-step`
 - Context note: `  - Context note`
 - Done: `- [x] ~~Task~~ (date)`
@@ -49,6 +49,7 @@ On first task interaction:
 ### Add a task
 - Add to `Active`
 - Include context if given: person, project, due date, waiting status
+- Prefer linking to existing memory pages instead of duplicating long context in `TASKS.md`
 
 ### Complete a task
 - Change `[ ]` to `[x]`
@@ -62,6 +63,7 @@ On first task interaction:
 ## Conventions
 
 - Bold the task title
+- Prefer `[[wikilinks]]` for project and person references when the corresponding memory page exists
 - Include `for [person]` when it is a commitment
 - Include `due [date]` for deadlines
 - Include `since [date]` for waiting items
@@ -75,5 +77,7 @@ When summarizing meetings or conversations, offer to add:
 - commitments the user made
 - action items assigned to them
 - follow-ups that clearly need tracking
+
+If extracted task context reveals durable new people, projects, or terms, suggest `/work-update` to refresh memory.
 
 Ask before adding extracted tasks.
