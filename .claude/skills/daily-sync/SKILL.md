@@ -24,9 +24,19 @@ Ask these one-by-one (or as one 3-part prompt), collect answers, then post once 
 ## Suggested Answers (default behavior)
 
 Before asking the 3 required questions, draft suggested answers using:
+- Your most recent prior daily standup reply, especially the previous day's `:hammer: Today:` items
 - Current session history (recent user-assistant work completed in this session)
 - `TASKS.md` status and recent edits
 - `memory/projects/*.md` and `memory/people/*.md` context relevant to active work
+
+### Prior Update Continuity
+
+Before drafting suggestions:
+1. Find your most recent prior daily standup reply in the same channel.
+2. Extract the bullets under `:hammer: Today:`.
+3. Use those bullets as the starting suggestion for today's `:white_check_mark: Yesterday:`.
+4. Cross-check against current session history and `TASKS.md`.
+5. If an item appears incomplete or uncertain, leave it out or shorten it rather than overstating progress.
 
 Then present the 3 questions with the `question` tool (not plain text), and include the suggested answer as an option for each question.
 
@@ -35,6 +45,10 @@ For each question:
 - Keep option labels short (e.g., `Use suggestion`).
 - Put the detailed suggested content in the option description.
 - Keep custom input enabled so the user can type their own answer.
+
+For the first question:
+- Option 1 must be exactly the previous standup's `:hammer: Today:` bullet list, unchanged, labeled as recommended.
+- You may include a second option with a refined version based on current evidence, but do not replace the exact carry-forward option.
 
 Use this exact question structure:
 
@@ -45,6 +59,9 @@ Use this exact question structure:
 Rules:
 - Keep suggestions concise and factual. Do not invent progress.
 - Format each suggested answer as bullet-ready content. Prefer one or more lines starting with `- ` so the posted update can be converted into Slack rich text bullets.
+- Prefer deriving the recommended `Yesterday` bullets from the previous standup's `Today` section, then refine using current evidence.
+- For Question 1, always preserve one exact carry-forward option from the previous standup's `Today` section.
+- Treat the previous day's `Today` section as a draft for continuity, not as proof of completion.
 - If confidence is low for any field, leave it blank and ask the user to fill it.
 - Treat user corrections as final.
 - If the user selects the suggested options, post directly without re-asking.
