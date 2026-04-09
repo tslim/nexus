@@ -64,7 +64,8 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
     ├── glossary.md
     ├── people/
     ├── projects/
-    └── context/
+    ├── context/
+    └── topics/
 ```
 
 ## Quick Start
