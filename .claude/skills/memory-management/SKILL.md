@@ -209,6 +209,7 @@ Preferred filing targets:
 Guidelines:
 - Simple factual lookups do not always require a durable write-back.
 - Substantial comparisons, status snapshots, and cross-source syntheses usually should be preserved.
+- Use stable filenames for recurring query or comparison pages, and update the existing page when the same durable question comes up again.
 - Ask before creating a brand new page when the filing value is uncertain.
 
 ### 3. Lint

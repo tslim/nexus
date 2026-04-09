@@ -106,6 +106,8 @@ Useful enrichments include:
 - deadlines or milestones worth preserving in project context
 - reusable comparisons or synthesized answers
 
+For recurring query or comparison outputs, prefer a stable filename and update the existing page instead of creating a dated duplicate.
+
 ### 7. Apply Confirmation Rules
 
 Safe to apply during `work-update`:
