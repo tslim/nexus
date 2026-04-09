@@ -19,7 +19,7 @@ memory/
 ├── SCHEMA.md      <- Structure rules and page conventions
 ├── index.md       <- Content catalog for the durable wiki
 ├── log.md         <- Chronological action log
-├── glossary.md    <- Decoder ring for acronyms, shorthand, names, and projects
+├── glossary.md    <- Decoder ring for acronyms, shorthand, aliases, and internal names
 ├── people/        <- Person pages
 ├── projects/      <- Project and workstream pages
 ├── context/       <- Shared organizational context
@@ -60,7 +60,7 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
   title: Page Title
   created: YYYY-MM-DD
   updated: YYYY-MM-DD
-  type: person | project | context | topic | comparison | query | glossary
+  type: person | project | context | topic | comparison | query | glossary | schema | index | log
   tags: [tag1, tag2]
   sources: []
   ---
@@ -69,6 +69,7 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
 - When updating a page, always bump the `updated` date
 - Every new page must be added to `index.md`
 - Every material change must be appended to `log.md`
+- Core files may use `schema`, `index`, or `log` as their frontmatter type
 
 ## People Pages
 One page per recurring collaborator or stakeholder. Include:
@@ -115,7 +116,7 @@ Filed query results worth keeping. Include:
 - Sources
 
 ## Glossary
-Central decoder ring for acronyms, internal terms, people, and project references.
+Central decoder ring for acronyms, internal terms, aliases, and other shorthand that needs quick decoding.
 ```
 
 ### `memory/index.md`
@@ -127,7 +128,7 @@ Central decoder ring for acronyms, internal terms, people, and project reference
 > Read this first to find relevant files for any memory-backed query.
 
 ## Glossary
-- [Glossary](glossary.md) - Decoder ring for acronyms, shorthand, names, and project references.
+- [Glossary](glossary.md) - Decoder ring for acronyms, shorthand, aliases, and internal names.
 
 ## People
 <!-- people pages listed here -->
@@ -204,7 +205,7 @@ Preferred filing targets:
 - thematic reference collection -> relevant `memory/topics/` page
 - reusable side-by-side analysis -> `memory/comparisons/`
 - reusable standalone synthesized answer -> `memory/queries/`
-- term clarification -> `memory/glossary.md`
+- term or alias clarification -> `memory/glossary.md`
 
 Guidelines:
 - Simple factual lookups do not always require a durable write-back.
