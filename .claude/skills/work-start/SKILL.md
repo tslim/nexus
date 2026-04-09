@@ -91,6 +91,7 @@ Create:
 - `memory/people/{name}.md`
 - `memory/projects/{name}.md`
 - `memory/context/company.md`
+- `memory/topics/`
 
 `memory/log.md` should use the append-only format defined by `memory-management`.
 

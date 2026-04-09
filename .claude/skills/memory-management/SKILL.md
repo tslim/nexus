@@ -16,6 +16,7 @@ memory/            <- Durable wiki. Unlimited scale.
   people/          <- Person pages
   projects/        <- Project pages
   context/         <- Company context (tools, channels, processes, teams)
+  topics/          <- Thematic notes and reference collections
 ```
 
 **CLAUDE.md is hot memory** - keep it compact (50-100 lines), storing only frequent people, active projects, and common terms. It should cover 90% of daily decoding needs. Durable detail goes in `memory/`.
@@ -27,6 +28,7 @@ memory/            <- Durable wiki. Unlimited scale.
 | Person | Frequent contacts only (~30) | `glossary.md` + `people/{name}.md` |
 | Acronym/term | Common only (~30) | `glossary.md` (complete) |
 | Project | Active only | `glossary.md` + `projects/{name}.md` |
+| Topic | No | `topics/{name}.md` |
 | Preference | All preferences | Optional context |
 | Assumption | Critical only | Page prose with `Assumption:` |
 | Open question | Critical only | Page prose with `Open question:` |
@@ -306,6 +308,7 @@ File durable outputs back into memory when they are likely to help again.
 - Project-related synthesis → `memory/projects/{name}.md`
 - Term clarification → `memory/glossary.md`
 - Company/team/tool context → `memory/context/*.md`
+- Thematic references or grouped research → `memory/topics/{name}.md`
 - Cross-cutting synthesis → ask user whether to create new page
 
 ## Lint Checks
@@ -322,7 +325,7 @@ Check for:
 
 ## New Page Types
 
-- Keep the core structure centered on `glossary.md`, `people/`, `projects/`, and `context/`
+- Keep the core structure centered on `glossary.md`, `people/`, `projects/`, `context/`, and `topics/`
 - Add new page types only when repeated use justifies them
 - Add any new page type to `memory/index.md`
 
@@ -333,4 +336,4 @@ Check for:
 - `memory/index.md`
 - `memory/log.md`
 - `memory/glossary.md`
-- Core `people/`, `projects/`, and `context/` structures
+- Core `people/`, `projects/`, `context/`, and `topics/` structures
