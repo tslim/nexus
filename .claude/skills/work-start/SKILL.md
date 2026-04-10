@@ -151,7 +151,7 @@ Seed:
 - starter `memory/people/{name}.md` and `memory/projects/{name}.md` pages when clearly supported by the selected task source
 - `memory/context/company.md` when enough organizational context is available
 
-`memory/log.md` should use the heading-based format defined by `memory-management`.
+`memory/log.md` should use the single-line format defined by `memory-management`.
 
 ## Report
 

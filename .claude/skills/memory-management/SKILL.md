@@ -159,10 +159,9 @@ Central decoder ring for acronyms, internal terms, aliases, and other shorthand 
 # Memory Log
 
 > Chronological record of all memory actions. Append-only.
-> Format: `## [YYYY-MM-DD] action | subject`
+> Format: `YYYY-MM-DD HH:MM:SS +TZ | action | subject | message`
 
-## [YYYY-MM-DD] create | Memory initialized
-- Created `SCHEMA.md`, `index.md`, and `log.md`
+YYYY-MM-DD 00:00:00 +0800 | create | Memory initialized | Created `SCHEMA.md`, `index.md`, and `log.md`
 ```
 
 ## Core Operations
