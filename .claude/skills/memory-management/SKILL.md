@@ -1,6 +1,6 @@
 ---
 name: memory-management
-description: Hot-cache plus persistent wiki memory system. CLAUDE.md handles fast operational decoding, while memory/ stores durable knowledge Claude maintains over time.
+description: Memory workflow for ingest, query, and lint operations, using a fast operational cache alongside a durable wiki in `memory/`.
 ---
 
 # Memory Management
@@ -46,7 +46,7 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
 
 ### `memory/SCHEMA.md`
 
-```markdown
+~~~markdown
 # Memory Schema
 
 ## Domain
@@ -117,7 +117,7 @@ Filed query results worth keeping. Include:
 
 ## Glossary
 Central decoder ring for acronyms, internal terms, aliases, and other shorthand that needs quick decoding.
-```
+~~~
 
 ### `memory/index.md`
 
@@ -219,11 +219,17 @@ When the user asks to lint, health-check, or audit the memory wiki:
 1. Scan for contradictions across related pages.
 2. Find orphan or weakly linked pages.
 3. Check for stale content in important pages.
-4. Identify missing dedicated pages for repeatedly referenced people, projects, terms, or topics.
-5. Verify that every durable page appears in `memory/index.md`.
-6. Verify that new durable pages follow `memory/SCHEMA.md`.
-7. Report findings first with specific file paths and suggested actions.
-8. Append the lint action to `memory/log.md` if changes were made or findings were formally recorded.
+4. Validate frontmatter for durable pages against `memory/SCHEMA.md`:
+   - required keys exist (`title`, `created`, `updated`, `type`, `tags`, `sources`)
+   - `type` matches the page category
+   - `updated` reflects recent edits when content changed
+   - core files also pass frontmatter validation, including `memory/log.md`
+   - core files use allowed core types
+5. Identify missing dedicated pages for repeatedly referenced people, projects, terms, or topics.
+6. Verify that every durable page appears in `memory/index.md`.
+7. Verify that new durable pages follow `memory/SCHEMA.md`.
+8. Report findings first with specific file paths and suggested actions.
+9. Append the lint action to `memory/log.md` if changes were made or findings were formally recorded.
 
 Group findings into:
 - Fix now
