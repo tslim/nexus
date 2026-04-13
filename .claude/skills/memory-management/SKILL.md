@@ -65,7 +65,7 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
   sources: []
   ---
   ```
-- Use `[[wikilinks]]` for new links between wiki pages
+- Use standard markdown links for new links between wiki pages
 - When updating a page, always bump the `updated` date
 - Every new page must be added to `index.md`
 - Every material change must be appended to `log.md`
@@ -175,7 +175,7 @@ When the user provides durable information such as project updates, decisions, r
 3. Update existing pages first when the information fits naturally.
 4. Create a new page only when the information does not fit an existing page cleanly.
 5. Follow `memory/SCHEMA.md` for page structure and conventions.
-6. Add meaningful cross-references with `[[wikilinks]]` when creating new links.
+6. Add meaningful cross-references with standard markdown links when creating new links.
 7. Update `memory/index.md` for every new, renamed, deleted, or reclassified page.
 8. Append the action to `memory/log.md`.
 9. Report which files were created or updated.

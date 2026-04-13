@@ -92,7 +92,7 @@ Follow `memory/SCHEMA.md` when creating or updating durable wiki pages.
 
 Process updates in this order:
 1. update existing pages when the new information fits naturally
-2. add meaningful `[[wikilinks]]` when creating new cross-references
+2. add meaningful markdown links when creating new cross-references
 3. create a new page only when the information does not fit an existing page cleanly
 4. file substantial reusable outputs into `memory/queries/` or `memory/comparisons/` when appropriate
 5. update `memory/index.md` for every new, renamed, deleted, or reclassified durable page
