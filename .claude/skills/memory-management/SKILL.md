@@ -68,7 +68,7 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
 - Use standard markdown links for new links between wiki pages
 - When updating a page, always bump the `updated` date
 - Every new page must be added to `index.md`
-- Every material change must be appended to `log.md`
+- Every material under `memory/` change must be appended to `log.md`
 - Core files may use `schema`, `index`, or `log` as their frontmatter type
 
 ## People Pages
