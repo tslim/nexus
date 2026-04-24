@@ -63,9 +63,10 @@ def search_titles(query):
 
     query_lower = query.lower()
     for doc_id, doc in docs.items():
-        title = doc.get("title", "").lower()
-        if query_lower in title:
-            print(f"{doc['created_at'][:10]} | {doc.get('title', 'Untitled')}")
+        title = doc.get("title")
+        if title:
+            if query_lower in title.lower():
+                print(f"{doc['created_at'][:10]} | {title}")
 
 
 def search_notes(query):
@@ -75,8 +76,14 @@ def search_notes(query):
 
     query_lower = query.lower()
     for doc_id, doc in docs.items():
-        content = (doc.get("notes_plain", "") or doc.get("notes_markdown", "")).lower()
-        if query_lower in content:
+        content_parts = []
+        if doc.get("notes_plain"):
+            content_parts.append(doc["notes_plain"])
+        if doc.get("notes_markdown"):
+            content_parts.append(doc["notes_markdown"])
+            
+        content = " ".join(content_parts).lower()
+        if content and query_lower in content:
             print(f"{doc['created_at'][:10]} | {doc.get('title', 'Untitled')}")
             idx = content.find(query_lower)
             start = max(0, idx - 50)
