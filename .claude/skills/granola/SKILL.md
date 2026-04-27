@@ -26,6 +26,17 @@ python3 .claude/skills/granola/granola-cli.py <command> [args]
 | `transcript <doc_id>` | Get transcript for meeting | `python3 granola-cli.py transcript 9078c7e6-bc44...` |
 | `info` | Show cache info | `python3 granola-cli.py info` |
 
+## Meeting Processing Workflow
+
+When processing a meeting for tasks, memory, decisions, or status updates:
+1. Use `get <doc_id>` to read the meeting metadata and notes.
+2. Use `transcript <doc_id>` for the same meeting before synthesizing conclusions.
+3. Treat notes as the structured summary and transcript as the verification source.
+4. If notes and transcript conflict, prefer the transcript and mention the conflict.
+5. If no transcript exists or transcription was disabled, say that explicitly.
+
+For recent activity scans, first use `recent [days]` or `list [limit]` to identify candidate meetings, then read both `get` and `transcript` for every meeting selected for analysis.
+
 ## Cache Location
 
 Granola stores meeting notes locally in:
