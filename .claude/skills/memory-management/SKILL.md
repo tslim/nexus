@@ -164,6 +164,14 @@ Central decoder ring for acronyms, internal terms, aliases, and other shorthand 
 YYYY-MM-DD 00:00:00 +0800 | create | Memory initialized | Created `SCHEMA.md`, `index.md`, and `log.md`
 ```
 
+Before appending to `memory/log.md`, get the actual local timestamp with:
+
+```bash
+date '+%Y-%m-%d %H:%M:%S %z'
+```
+
+Use that exact timestamp in each appended log entry. Do not estimate, round, or invent timestamps.
+
 ## Core Operations
 
 ### 1. Ingest
