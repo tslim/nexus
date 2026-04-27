@@ -39,6 +39,29 @@ Compare external tasks against `TASKS.md`:
 - task missing externally -> flag as potentially stale
 - completed externally -> offer to mark done
 
+#### `TASKS.md` Confirmation Rules
+
+Do not edit `TASKS.md` directly from scanned activity unless the user confirms the change.
+
+During task sync and activity scan:
+- Collect candidate task additions, completions, stale items, and waiting-state changes.
+- Compare each candidate against existing `TASKS.md` entries.
+- Present a short triage prompt before editing.
+- If the user chooses no changes, leave `TASKS.md` untouched.
+- Only apply confirmed task edits.
+
+Safe without confirmation:
+- Reading `TASKS.md`
+- Reporting possible stale tasks
+- Reporting likely missing tasks
+- Reporting external completion signals
+
+Requires confirmation:
+- Adding a task
+- Completing a task
+- Moving a task between `Active`, `Waiting On`, `Someday`, and `Done`
+- Changing task wording, due dates, links, or subtasks
+
 ### 3. Scan Recent Activity
 
 Before checking a source, look for and load the relevant skill from `.claude/skills` when available.
@@ -71,6 +94,8 @@ Present triage options such as:
 - reschedule
 - move to someday
 - keep active
+
+These triage options are suggestions until the user confirms the `TASKS.md` edit.
 
 ### 5. Resolve Unknowns
 
