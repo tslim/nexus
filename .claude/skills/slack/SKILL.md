@@ -18,7 +18,7 @@ node .claude/skills/slack/slack-cli.js <command> [args]
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `channels` | List all channels | `node slack-cli.js channels` |
+| `channels [--filter regex] [--limit N] [--types types] [--json]` | List channels with pagination, optional regex filtering, and JSON output | `node slack-cli.js channels --filter "project" --json` |
 | `history <channelId> [--limit N] [--days N] [--oldest ts] [--latest ts] [--json]` | Read channel history with filters | `node slack-cli.js history C0A11MKGDT2 --days 7 --json` |
 | `search <query> [--channels ids] [--days N] [--limit N] [--json]` | Search Slack messages by query | `node slack-cli.js search "blocker" --channels C0A1K7R9W74` |
 | `messages-filter <channelId> --pattern <regex> [--days N] [--json]` | Filter channel messages by regex | `node slack-cli.js messages-filter C0A1K7R9W74 --pattern "blocked|waiting on"` |

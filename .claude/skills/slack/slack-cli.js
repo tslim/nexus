@@ -271,13 +271,27 @@ const extractPatterns = {
 };
 
 const commands = {
-  async channels() {
-    const result = await web.conversations.list({
-      types: "public_channel,private_channel,mpim,im",
-      limit: 200,
-    });
+  async channels(args) {
+    const { flags } = parseArgs(args);
+    const types = flags.types || "public_channel,private_channel,mpim,im";
+    const filter = flags.filter ? new RegExp(flags.filter, "i") : null;
+    const max = flags.limit ? toInt(flags.limit, 200) : null;
+    const channels = [];
+    let cursor = null;
 
-    result.channels.forEach((c) => {
+    do {
+      const remaining = max ? max - channels.length : 1000;
+      const result = await web.conversations.list({
+        types,
+        limit: Math.min(1000, remaining || 1000),
+        cursor: cursor || undefined,
+      });
+
+      channels.push(...(result.channels || []));
+      cursor = result.response_metadata && result.response_metadata.next_cursor;
+    } while (cursor && (!max || channels.length < max));
+
+    const rows = channels.map((c) => {
       const type = c.is_mpim
         ? "group-dm"
         : c.is_im
@@ -288,7 +302,19 @@ const commands = {
       const name =
         c.name || c.name_normalized || (c.user ? `DM:${c.user}` : "unnamed");
       const members = c.num_members != null ? c.num_members : "-";
-      console.log(`${name} | ${c.id} | ${type} | ${members} members`);
+      return { name, channel_id: c.id, type, members };
+    }).filter((row) => {
+      if (!filter) return true;
+      return filter.test(row.name) || filter.test(row.channel_id);
+    });
+
+    if (flags.json) {
+      printResult({ count: rows.length, channels: rows }, true);
+      return;
+    }
+
+    rows.forEach((row) => {
+      console.log(`${row.name} | ${row.channel_id} | ${row.type} | ${row.members} members`);
     });
   },
 
@@ -845,7 +871,7 @@ async function main() {
     console.log(`Usage: slack-cli <command> [args]
 
 Commands:
-  channels
+  channels [--filter regex] [--limit N] [--types types] [--json]
   history <channelId> [--limit N] [--days N] [--oldest ts] [--latest ts] [--json]
   dm-history <userId> [--limit N] [--days N] [--oldest ts] [--latest ts] [--json]
   search <query> [--channels C1,C2] [--days N] [--limit N] [--json]
@@ -871,7 +897,7 @@ Environment:
   try {
     switch (cmd) {
       case "channels":
-        await commands.channels();
+        await commands.channels(args);
         break;
       case "history":
         await commands.history(args);
