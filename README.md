@@ -1,6 +1,6 @@
 # Work Assistant 
 
-This repository provides a skill-driven work assistant for Claude Code / Opencode with:
+This repository provides a skill-driven work assistant for [Claude Code](https://claude.com/product/claude-code) / [Opencode](https://opencode.ai) / [Pi.dev](https://pi.dev) with:
 
 - `TASKS.md` as the shared task board
 - `CLAUDE.md` as generated working memory (hot cache)
@@ -37,6 +37,19 @@ This repository provides a skill-driven work assistant for Claude Code / Opencod
 | `slack` | Reads and sends Slack messages via `.claude/skills/slack/slack-cli.js` with `@slack/web-api`. |
 | `granola` | Reads local meeting notes/transcripts via `.claude/skills/granola/granola-cli.py` |
 | `notebooklm` | Manages NotebookLM notebooks, sources, chats, and generated artifacts via `notebooklm-py`. |
+
+## Pi Agent Extensions
+
+This repository includes custom UI extensions for [pi](https://pi.dev), the coding agent framework.
+
+The extension `.pi/extensions/work-status-widget.ts` provides a continuous status bar widget and several interactive modals to manage your workflow directly within the TUI:
+
+| Command | Purpose |
+|---|---|
+| `/tasks` | Interactive TUI modal to view `TASKS.md` categories, page through tasks, and mark open tasks as done (uses `Space` or `Enter`). |
+| `/tasks-refresh` | Manually refreshes the work status widget shown in the TUI footer. |
+| `/logs` | Interactive modal to page through `memory/log.md` entries (Older/Newer), keeping you aware of recent context changes. |
+| `/browse` | Fuzzy file browser for the `memory/` directory. Provides a scrollable file preview with markdown rendering (`r` to toggle raw source) and fast keyboard navigation. |
 
 ## Repository Structure
 
