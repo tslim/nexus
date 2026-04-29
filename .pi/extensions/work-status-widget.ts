@@ -1,9 +1,10 @@
 import type { ExtensionAPI, ExtensionContext, Theme } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import type { Component, TUI } from "@mariozechner/pi-tui";
-import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { execSync } from "node:child_process";
 
 const WIDGET_ID = "work-status-widget";
 const MAX_LINES = 8;
@@ -134,6 +135,28 @@ function formatMemoryLogLine(line: string): { timestamp: string; description: st
 function readLatestMemoryLog(cwd: string): { timestamp: string; description: string } | undefined {
   const latest = readMemoryLogLines(cwd).at(-1);
   return latest ? formatMemoryLogLine(latest) : undefined;
+}
+
+function readLatestBackup(cwd: string): string | undefined {
+  try {
+    const envPath = join(cwd, ".env");
+    if (!existsSync(envPath)) return undefined;
+    const env = readFileSync(envPath, "utf8");
+    const match = env.match(/^MEMORY_BACKUP_DIR=(.*)$/m);
+    if (!match) return undefined;
+    
+    let dir = match[1]!.trim();
+    if (dir.startsWith('"') && dir.endsWith('"')) {
+      dir = dir.slice(1, -1);
+    } else {
+      dir = dir.replace(/\\ /g, " ").replace(/\\~/g, "~");
+    }
+    
+    const out = execSync(`git -C "${dir}" log -1 --format="%cr"`, { stdio: "pipe", encoding: "utf8" });
+    return out.trim();
+  } catch {
+    return undefined;
+  }
 }
 
 type MemoryFile = {
@@ -541,14 +564,6 @@ class TasksModalComponent implements Component {
   render(width: number): string[] {
     if (this.cachedLines && this.cachedWidth === width) return this.cachedLines;
 
-    const inner = Math.max(20, width - 4);
-    const top = `╭${"─".repeat(inner + 2)}╮`;
-    const bottom = `╰${"─".repeat(inner + 2)}╯`;
-    const row = (text = "") => {
-      const clipped = truncateToWidth(text, inner);
-      return `│ ${clipped}${" ".repeat(Math.max(0, inner - visibleWidth(clipped)))} │`;
-    };
-
     const category = this.category;
     const tasks = this.tasks;
     const openCount = tasks.filter((task) => !task.done).length;
@@ -563,21 +578,34 @@ class TasksModalComponent implements Component {
       })
       .join(this.theme.fg("dim", "  ·  "));
 
+    const inner = Math.max(20, width - 4);
+    const top = `╭${"─".repeat(inner + 2)}╮`;
+    const bottom = `╰${"─".repeat(inner + 2)}╯`;
+    const row = (text = "", preserveAnsiAndWrap = false) => {
+      if (preserveAnsiAndWrap) {
+        const { wrapTextWithAnsi } = require("@mariozechner/pi-tui");
+        const wrappedLines = wrapTextWithAnsi(text, inner);
+        return wrappedLines.map((l: string) => `│ ${l}${" ".repeat(Math.max(0, inner - visibleWidth(l)))} │`);
+      }
+      const clipped = truncateToWidth(text, inner);
+      return [`│ ${clipped}${" ".repeat(Math.max(0, inner - visibleWidth(clipped)))} │`];
+    };
+
     const lines = [
       top,
-      row(`${this.theme.fg("accent", this.theme.bold(`TASKS.md · ${category?.name ?? "Tasks"}`))} ${this.theme.fg("muted", `${openCount} open · ${doneCount} done · category ${this.categoryIndex + 1}/${Math.max(1, this.result.categories.length)} · page ${this.page + 1}/${this.maxPage + 1}`)}`),
-      row(this.theme.fg("dim", "←/→ category · ↑/k ↓/j move · Space/Enter mark done · n/p page · Esc/q close")),
-      row(),
+      ...row(`${this.theme.fg("accent", this.theme.bold(`TASKS.md · ${category?.name ?? "Tasks"}`))} ${this.theme.fg("muted", `${openCount} open · ${doneCount} done · category ${this.categoryIndex + 1}/${Math.max(1, this.result.categories.length)} · page ${this.page + 1}/${this.maxPage + 1}`)}`),
+      ...row(this.theme.fg("dim", "←/→ category · ↑/k ↓/j move · Space/Enter mark done · n/p page · Esc/q close")),
+      ...row(),
     ];
 
     if (this.result.error) {
-      lines.push(row(this.theme.fg("error", `⚠ ${this.result.error}`)));
+      lines.push(...row(this.theme.fg("error", `⚠ ${this.result.error}`)));
     } else if (!category) {
-      lines.push(row(this.theme.fg("warning", "No task categories found.")));
+      lines.push(...row(this.theme.fg("warning", "No task categories found.")));
     } else if (tasks.length === 0) {
-      lines.push(row(this.theme.fg("muted", `No tasks in ${category.name}.`)));
+      lines.push(...row(this.theme.fg("muted", `No tasks in ${category.name}.`)));
     } else {
-      if (pageStart > 0) lines.push(row(this.theme.fg("muted", `… page ${this.page} above (${pageStart} task(s))`)));
+      if (pageStart > 0) lines.push(...row(this.theme.fg("muted", `… page ${this.page} above (${pageStart} task(s))`)));
       for (let i = pageStart; i < pageEnd; i++) {
         const task = tasks[i]!;
         const prefix = i === this.selected ? this.theme.fg("accent", "> ") : "  ";
@@ -585,13 +613,13 @@ class TasksModalComponent implements Component {
           ? task.display.replace(/^(\s*)☑\s+/, (_match, indent) => `${indent}${this.theme.fg("success", "☑")} `)
           : task.display.replace(/^(\s*)☐\s+/, (_match, indent) => `${indent}${this.theme.fg("warning", "☐")} `);
         const text = task.done ? this.theme.fg("dim", styled) : styled;
-        lines.push(row(`${prefix}${i === this.selected ? this.theme.fg("accent", text) : text}`));
+        lines.push(...row(`${prefix}${i === this.selected ? this.theme.fg("accent", text) : text}`, true));
       }
-      if (pageEnd < tasks.length) lines.push(row(this.theme.fg("muted", `… page ${this.page + 2} below (${tasks.length - pageEnd} task(s))`)));
+      if (pageEnd < tasks.length) lines.push(...row(this.theme.fg("muted", `… page ${this.page + 2} below (${tasks.length - pageEnd} task(s))`)));
     }
 
-    lines.push(row());
-    lines.push(row(categorySummary || this.theme.fg("muted", "No categories")));
+    lines.push(...row());
+    lines.push(...row(categorySummary || this.theme.fg("muted", "No categories")));
     lines.push(bottom);
 
     this.cachedWidth = width;
@@ -732,17 +760,27 @@ function updateWidget(ctx: ExtensionContext) {
   if (!ctx.hasUI) return;
 
   const latestLog = readLatestMemoryLog(ctx.cwd);
+  const backup = readLatestBackup(ctx.cwd);
   const result = readActiveTasks(ctx.cwd);
   const theme = ctx.ui.theme;
+  
   const taskSummary = result.error
     ? theme.fg("error", result.error)
-    : `${theme.fg("accent", String(result.activeCount))} active task(s)`;
-  const logSummary = latestLog
-    ? ` · ${theme.fg("muted", `log ${latestLog.timestamp}`)} · ${theme.fg("dim", latestLog.description)}`
-    : "";
+    : `${theme.fg("accent", String(result.activeCount))} task(s)`;
+    
+  let logSummary = "";
+  if (latestLog) {
+    const timeMatch = latestLog.timestamp.match(/(\d{4})-(\d{2})-(\d{2})\s(\d{2}:\d{2})/);
+    const shortTime = timeMatch ? `${timeMatch[3]}-${timeMatch[2]}-${timeMatch[1]} ${timeMatch[4]}` : latestLog.timestamp;
+    const parts = latestLog.description.split(" · ");
+    const shortDesc = parts.slice(0, 2).join(" ");
+    logSummary = ` · ${theme.fg("muted", "log")} ${theme.fg("muted", shortTime)} ${theme.fg("dim", shortDesc)}`;
+  }
+  
+  const backupSummary = backup ? ` · ${theme.fg("muted", "backup")} ${theme.fg("dim", backup)}` : "";
 
   ctx.ui.setWidget(WIDGET_ID, undefined);
-  ctx.ui.setStatus(WIDGET_ID, `${taskSummary}${logSummary}`);
+  ctx.ui.setStatus(WIDGET_ID, `${taskSummary}${logSummary}${backupSummary}`);
 }
 
 async function showTasksModal(ctx: ExtensionContext) {
