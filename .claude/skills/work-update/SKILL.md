@@ -131,6 +131,12 @@ Useful enrichments include:
 - deadlines or milestones worth preserving in project context
 - reusable comparisons or synthesized answers
 
+Keep memory compact:
+- Merge or replace stale bullets instead of appending routine daily updates.
+- Do not duplicate standup details across person and project pages.
+- People pages should keep stable role, current work areas, and durable milestones only.
+- Skip transient logistics, repeated progress, and implementation detail with no future decision value.
+
 For recurring query or comparison outputs, prefer a stable filename and update the existing page instead of creating a dated duplicate.
 
 ### 7. Apply Confirmation Rules
