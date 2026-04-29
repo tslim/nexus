@@ -49,6 +49,7 @@ The extension `.pi/extensions/work-status-widget.ts` provides a continuous statu
 | `/tasks` | Interactive TUI modal to view `TASKS.md` categories, page through tasks, and mark open tasks as done (uses `Space` or `Enter`). |
 | `/tasks-refresh` | Manually refreshes the work status widget shown in the TUI footer. |
 | `/browse` | Fuzzy file browser for the `memory/` directory. Provides a scrollable file preview with markdown rendering (`r` to toggle raw source) and fast keyboard navigation. |
+| `/calendar` | Overlay showing upcoming Google Calendar events via `gog`. |
 | `/logs` | Interactive modal to page through `memory/log.md` entries (Older/Newer), keeping you aware of recent context changes. |
 
 ## Repository Structure

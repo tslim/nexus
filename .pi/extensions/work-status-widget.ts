@@ -4,7 +4,7 @@ import type { Component, TUI } from "@mariozechner/pi-tui";
 import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { execSync } from "node:child_process";
+import { exec, execSync } from "node:child_process";
 
 const WIDGET_ID = "work-status-widget";
 const MAX_LINES = 8;
@@ -25,6 +25,165 @@ type TaskBrowserResult = {
   totalCount: number;
   error?: string;
 };
+
+type CalendarEvent = {
+  summary: string;
+  startLabel: string;
+  endLabel: string;
+  location?: string;
+  status?: string;
+  link?: string;
+  startMs: number;
+  allDay: boolean;
+  dayKey: string;
+};
+
+type CalendarDay = {
+  dateKey: string;
+  title: string;
+  events: CalendarEvent[];
+};
+
+const CALENDAR_CACHE: {
+  key?: string;
+  days?: CalendarDay[];
+  error?: string;
+  loading?: Promise<void>;
+} = {};
+
+const STANDARD_OVERLAY_OPTIONS = { anchor: "center", width: "95%", maxHeight: "90%", minWidth: 80, margin: 1 };
+const CALENDAR_OVERLAY_OPTIONS = {
+  anchor: "center",
+  width: "72%",
+  maxHeight: "92%",
+  minWidth: 72,
+  margin: 1,
+  visible: (termWidth: number) => termWidth >= 110,
+};
+
+function formatCalendarDayTitle(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map((part) => Number.parseInt(part, 10));
+  if (!year || !month || !day) return dateKey;
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
+function formatCalendarTime(value: unknown): { label: string; startMs: number; allDay: boolean; dateKey: string } | undefined {
+  if (typeof value !== "string" || !value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return { label: "All day", startMs: new Date(`${value}T00:00:00`).getTime(), allDay: true, dateKey: value };
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return {
+    label: new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(date),
+    startMs: date.getTime(),
+    allDay: false,
+    dateKey,
+  };
+}
+
+function getTodayKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function compareDateKeys(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+function groupCalendarEvents(raw: unknown[], fromDateKey: string): CalendarDay[] {
+  const events: CalendarEvent[] = raw
+    .map((item) => {
+      const event = item as Record<string, unknown>;
+      const start = (event.start as { dateTime?: unknown; date?: unknown } | undefined) ?? {};
+      const end = (event.end as { dateTime?: unknown; date?: unknown } | undefined) ?? {};
+      const startTime = formatCalendarTime(start.dateTime ?? start.date);
+      const endTime = formatCalendarTime(end.dateTime ?? end.date);
+      const link =
+        (typeof event.hangoutLink === "string" && event.hangoutLink) ||
+        (typeof event.htmlLink === "string" && event.htmlLink) ||
+        undefined;
+      if (!startTime) return undefined;
+
+      const dayKey = compareDateKeys(startTime.dateKey, fromDateKey) < 0 ? fromDateKey : startTime.dateKey;
+      return {
+        summary: typeof event.summary === "string" && event.summary ? event.summary : "(no title)",
+        startLabel: startTime.label,
+        endLabel: endTime?.label ?? startTime.label,
+        location: typeof event.location === "string" && event.location ? event.location : undefined,
+        status: typeof event.status === "string" ? event.status : undefined,
+        link,
+        startMs: startTime.startMs,
+        allDay: startTime.allDay,
+        dayKey,
+      } satisfies CalendarEvent;
+    })
+    .filter((event): event is CalendarEvent => Boolean(event))
+    .sort((a, b) => a.startMs - b.startMs || a.summary.localeCompare(b.summary));
+
+  const byDay = new Map<string, CalendarEvent[]>();
+  for (const event of events) {
+    const day = event.dayKey;
+    const list = byDay.get(day) ?? [];
+    list.push(event);
+    byDay.set(day, list);
+  }
+
+  return [...byDay.entries()]
+    .sort(([a], [b]) => compareDateKeys(a, b))
+    .map(([dateKey, dayEvents]) => ({ dateKey, title: formatCalendarDayTitle(dateKey), events: dayEvents }));
+}
+
+function loadUpcomingCalendarDays(cwd: string, max = 30): Promise<{ days: CalendarDay[]; error?: string }> {
+  const fromDateKey = getTodayKey();
+  const cacheKey = `${cwd}|${max}|${fromDateKey}`;
+  if (CALENDAR_CACHE.key === cacheKey && CALENDAR_CACHE.days && !CALENDAR_CACHE.loading) {
+    return Promise.resolve({ days: CALENDAR_CACHE.days, error: CALENDAR_CACHE.error });
+  }
+  if (CALENDAR_CACHE.key === cacheKey && CALENDAR_CACHE.loading) {
+    return CALENDAR_CACHE.loading.then(() => ({ days: CALENDAR_CACHE.days ?? [], error: CALENDAR_CACHE.error }));
+  }
+
+  CALENDAR_CACHE.key = cacheKey;
+  CALENDAR_CACHE.loading = new Promise<void>((resolve) => {
+    exec(`gog calendar events --all --from ${fromDateKey} --max ${max} --json --results-only`, { cwd, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      try {
+        if (error) throw new Error(stderr || error.message);
+        const output = stdout.trim();
+        if (!output) {
+          CALENDAR_CACHE.days = [];
+          CALENDAR_CACHE.error = undefined;
+          return;
+        }
+
+        const parsed = JSON.parse(output) as unknown;
+        const raw = Array.isArray(parsed) ? parsed : [];
+        CALENDAR_CACHE.days = groupCalendarEvents(raw, fromDateKey).filter((day) => compareDateKeys(day.dateKey, fromDateKey) >= 0);
+        CALENDAR_CACHE.error = undefined;
+      } catch (err) {
+        CALENDAR_CACHE.days = [];
+        CALENDAR_CACHE.error = err instanceof Error ? err.message : String(err);
+      } finally {
+        CALENDAR_CACHE.loading = undefined;
+        resolve();
+      }
+    });
+  });
+
+  return CALENDAR_CACHE.loading.then(() => ({ days: CALENDAR_CACHE.days ?? [], error: CALENDAR_CACHE.error }));
+}
+
+function warmCalendarDays(cwd: string): void {
+  void loadUpcomingCalendarDays(cwd);
+}
 
 function cleanTaskText(line: string): string {
   return line
@@ -206,6 +365,125 @@ function fuzzyScore(text: string, query: string): number {
   if (target.includes(needle)) score += 100;
   if (target.startsWith(needle)) score += 50;
   return score - target.length / 1000;
+}
+
+class CalendarPanelComponent implements Component {
+  private dayIndex = 0;
+  private days: CalendarDay[] = CALENDAR_CACHE.days ?? [];
+  private error: string | undefined = CALENDAR_CACHE.error;
+  private loading = !CALENDAR_CACHE.days && !CALENDAR_CACHE.error;
+  private cachedWidth?: number;
+  private cachedLines?: string[];
+
+  constructor(
+    private readonly tui: TUI,
+    private readonly theme: Theme,
+    private readonly cwd: string,
+    private readonly done: () => void,
+  ) {
+    void this.load();
+  }
+
+  private async load() {
+    if (CALENDAR_CACHE.cwd === this.cwd && CALENDAR_CACHE.days && !CALENDAR_CACHE.loading) {
+      this.days = CALENDAR_CACHE.days;
+      this.error = CALENDAR_CACHE.error;
+      this.loading = false;
+      this.refresh();
+      return;
+    }
+
+    this.loading = true;
+    this.refresh();
+    await loadUpcomingCalendarDays(this.cwd, 40);
+    this.days = CALENDAR_CACHE.days ?? [];
+    this.error = CALENDAR_CACHE.error;
+    this.loading = false;
+    this.dayIndex = Math.min(this.dayIndex, Math.max(0, this.days.length - 1));
+    this.refresh();
+  }
+
+  private get maxDayIndex(): number {
+    return Math.max(0, this.days.length - 1);
+  }
+
+  private refresh() {
+    this.invalidate();
+    this.tui.requestRender();
+  }
+
+  private moveDay(delta: number) {
+    const next = Math.max(0, Math.min(this.maxDayIndex, this.dayIndex + delta));
+    if (next === this.dayIndex) return;
+    this.dayIndex = next;
+    this.refresh();
+  }
+
+  handleInput(data: string): void {
+    if (matchesKey(data, Key.escape) || data === "q") {
+      this.done();
+      return;
+    }
+    if (matchesKey(data, Key.right) || data === "l" || data === "o" || matchesKey(data, Key.pageDown)) {
+      this.moveDay(1);
+      return;
+    }
+    if (matchesKey(data, Key.left) || data === "h" || data === "n" || matchesKey(data, Key.pageUp)) {
+      this.moveDay(-1);
+    }
+  }
+
+  render(width: number): string[] {
+    if (this.cachedLines && this.cachedWidth === width) return this.cachedLines;
+
+    const inner = Math.max(34, width - 4);
+    const top = `╭${"─".repeat(inner + 2)}╮`;
+    const bottom = `╰${"─".repeat(inner + 2)}╯`;
+    const row = (text = "") => {
+      const clipped = truncateToWidth(text, inner);
+      return `│ ${clipped}${" ".repeat(Math.max(0, inner - visibleWidth(clipped)))} │`;
+    };
+
+    const currentDay = this.days[this.dayIndex];
+    const title = currentDay ? `${currentDay.title}` : this.loading ? "Loading…" : "No calendar data";
+    const pageInfo = this.days.length > 0 ? `day ${this.dayIndex + 1}/${this.days.length}` : "day 0/0";
+
+    const lines = [
+      top,
+      row(`${this.theme.fg("accent", this.theme.bold("Calendar"))} ${this.theme.fg("muted", `· ${title} · ${pageInfo}`)}`),
+      row(this.theme.fg("dim", "←/→ day · PgUp/PgDn · Esc/q close")),
+      row(),
+    ];
+
+    if (this.loading && !currentDay) {
+      lines.push(row(this.theme.fg("muted", "Loading calendar events…")));
+    } else if (this.error && !currentDay) {
+      lines.push(row(this.theme.fg("error", `⚠ ${this.error}`)));
+    } else if (!currentDay) {
+      lines.push(row(this.theme.fg("muted", "No upcoming events found.")));
+    } else {
+      lines.push(row(this.theme.fg("accent", this.theme.bold(currentDay.title))));
+      lines.push(row(this.theme.fg("dim", `${currentDay.events.length} event(s)`)));
+      lines.push(row());
+
+      for (const event of currentDay.events) {
+        const time = event.allDay || event.endLabel === event.startLabel ? event.startLabel : `${event.startLabel}–${event.endLabel}`;
+        const status = event.status && event.status !== "confirmed" ? ` [${event.status}]` : "";
+        const meta = event.location || event.link ? ` — ${event.location ?? event.link}` : "";
+        lines.push(row(`${this.theme.fg("accent", time)} ${event.summary}${status}${this.theme.fg("dim", meta)}`));
+      }
+    }
+
+    lines.push(bottom);
+    this.cachedWidth = width;
+    this.cachedLines = lines;
+    return lines;
+  }
+
+  invalidate(): void {
+    this.cachedWidth = undefined;
+    this.cachedLines = undefined;
+  }
 }
 
 class MemoryBrowserComponent implements Component {
@@ -583,7 +861,6 @@ class TasksModalComponent implements Component {
     const bottom = `╰${"─".repeat(inner + 2)}╯`;
     const row = (text = "", preserveAnsiAndWrap = false) => {
       if (preserveAnsiAndWrap) {
-        const { wrapTextWithAnsi } = require("@mariozechner/pi-tui");
         const wrappedLines = wrapTextWithAnsi(text, inner);
         return wrappedLines.map((l: string) => `│ ${l}${" ".repeat(Math.max(0, inner - visibleWidth(l)))} │`);
       }
@@ -791,10 +1068,30 @@ async function showTasksModal(ctx: ExtensionContext) {
     (tui, theme, _keybindings, done) => new TasksModalComponent(tui, theme, result, (lineIndex) => markTaskDone(ctx.cwd, lineIndex), done),
     {
       overlay: true,
-      overlayOptions: { anchor: "center", width: "95%", maxHeight: "90%", minWidth: 80, margin: 1 },
+      overlayOptions: STANDARD_OVERLAY_OPTIONS,
     },
   );
   updateWidget(ctx);
+}
+
+async function openCalendarOverlay(ctx: ExtensionContext) {
+  if (!ctx.hasUI) return;
+
+  warmCalendarDays(ctx.cwd);
+  await ctx.ui.custom<void>(
+    (tui, theme, _keybindings, done) => new CalendarPanelComponent(tui, theme, ctx.cwd, done),
+    {
+      overlay: true,
+      overlayOptions: {
+        anchor: "center",
+        width: "72%",
+        maxHeight: "92%",
+        minWidth: 72,
+        margin: 1,
+        visible: (termWidth) => termWidth >= 110,
+      },
+    },
+  );
 }
 
 async function showMemoryBrowser(ctx: ExtensionContext) {
@@ -805,7 +1102,7 @@ async function showMemoryBrowser(ctx: ExtensionContext) {
     (tui, theme, _keybindings, done) => new MemoryBrowserComponent(tui, theme, result.files, result.error, done),
     {
       overlay: true,
-      overlayOptions: { anchor: "center", width: "95%", maxHeight: "90%", minWidth: 80, margin: 1 },
+      overlayOptions: STANDARD_OVERLAY_OPTIONS,
     },
   );
   updateWidget(ctx);
@@ -814,10 +1111,12 @@ async function showMemoryBrowser(ctx: ExtensionContext) {
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     updateWidget(ctx);
+    warmCalendarDays(ctx.cwd);
   });
 
   pi.on("turn_end", async (_event, ctx) => {
     updateWidget(ctx);
+    warmCalendarDays(ctx.cwd);
   });
 
   pi.registerShortcut("ctrl+shift+t", {
@@ -846,6 +1145,13 @@ export default function (pi: ExtensionAPI) {
     description: "Fuzzy browse and view files under memory/",
     handler: async (_args, ctx) => {
       await showMemoryBrowser(ctx);
+    },
+  });
+
+  pi.registerCommand("calendar", {
+    description: "Show upcoming calendar events in a right-side panel",
+    handler: async (_args, ctx) => {
+      await openCalendarOverlay(ctx);
     },
   });
 
