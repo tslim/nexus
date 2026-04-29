@@ -71,20 +71,26 @@ Do not duplicate schema rules in this skill unless needed for execution workflow
 - Every material under `memory/` change must be appended to `log.md`
 - Core files may use `schema`, `index`, or `log` as their frontmatter type
 
+## Compact Pages
+- Prefer synthesis over chronology; merge or replace stale bullets before appending.
+- People pages: aim for 15-35 lines; keep identity, context, work areas, relationships, and durable milestones.
+- Active project pages: aim for 40-80 lines; completed projects: 25-60 lines. Longer pages need useful timelines, decision tables, or references.
+
 ## People Pages
 One page per recurring collaborator or stakeholder. Include:
-- Overview / role
+- Identity and role
+- Context or current work
 - Key facts or identifiers when useful
 - Relationships to projects, teams, or people
-- Durable notes only
+- Durable milestones only
 
 ## Project Pages
 One page per project or workstream. Include:
 - Status and type
 - What it is
 - Key people
-- Current threads, recent activity, or important decisions
-- Relationships and relevant references
+- Current state, active work, decisions, risks, or durable recent activity
+- Relevant references
 
 ## Context Pages
 Shared organizational reference pages. Include:
@@ -191,6 +197,8 @@ When the user provides durable information such as project updates, decisions, r
 Guidelines:
 - Put durable detail in `memory/`.
 - Prefer targeted updates over broad rewrites.
+- Keep pages compact: synthesize, merge, or replace bullets instead of appending routine chronology.
+- Size guide: people 15-35 lines, active projects 40-80, completed projects 25-60; exceed only for useful timelines, decision tables, or references.
 - Ask before mass-updating if the ingest would touch 10 or more existing pages.
 
 ### 2. Query
