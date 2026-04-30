@@ -115,15 +115,7 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.registerCommand("tasks-refresh", {
-    description: "Refresh work status line from TASKS.md and memory/log.md",
-    handler: async (_args, ctx) => {
-      updateWidget(ctx);
-      ctx.ui.notify("Work status refreshed", "info");
-    },
-  });
-
-  pi.registerCommand("browse", {
+  pi.registerCommand("memory", {
     description: "Fuzzy browse and view files under memory/",
     handler: async (_args, ctx) => {
       await showMemoryBrowser(ctx);
