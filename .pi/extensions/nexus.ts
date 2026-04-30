@@ -35,7 +35,7 @@ function updateWidget(ctx: ExtensionContext) {
   const backupSummary = backup ? ` · ${theme.fg("muted", "backup")} ${theme.fg("dim", backup)}` : "";
 
   ctx.ui.setWidget(WIDGET_ID, undefined);
-  ctx.ui.setStatus(WIDGET_ID, `${taskSummary}${logSummary}${backupSummary}`);
+  ctx.ui.setStatus(WIDGET_ID, `${theme.fg("dim", "· ")}${taskSummary}${logSummary}${backupSummary}`);
 }
 
 async function openTasksModal(ctx: ExtensionContext) {

@@ -101,11 +101,6 @@ export class MemoryBrowserComponent implements Component {
       else this.done();
       return;
     }
-    if (data === "q") {
-      this.done();
-      return;
-    }
-
     if (this.openFile) {
       if (matchesKey(data, Key.up) || data === "k") {
         this.scroll = Math.max(0, this.scroll - 1);
@@ -139,12 +134,12 @@ export class MemoryBrowserComponent implements Component {
     }
 
     const matches = this.getMatches();
-    if (matchesKey(data, Key.up) || data === "k") {
+    if (matchesKey(data, Key.up)) {
       this.selected = Math.max(0, this.selected - 1);
       this.refresh();
       return;
     }
-    if (matchesKey(data, Key.down) || data === "j") {
+    if (matchesKey(data, Key.down)) {
       this.selected = Math.min(Math.max(0, matches.length - 1), this.selected + 1);
       this.refresh();
       return;
@@ -159,6 +154,9 @@ export class MemoryBrowserComponent implements Component {
       return;
     }
 
+    // In search mode, printable characters must belong to the query. Do not
+    // steal letters such as q/j/k for shortcuts; use Esc to close and arrows
+    // to navigate while searching.
     const printable = /^[ -~]$/.test(data) ? data : undefined;
     if (printable) {
       this.setQuery(this.query + printable);
@@ -213,7 +211,7 @@ export class MemoryBrowserComponent implements Component {
 
       lines.push(row(`${this.theme.fg("accent", this.theme.bold("Browse memory/"))} ${this.theme.fg("muted", `${matches.length}/${this.files.length} files`)}`));
       lines.push(row(`${this.theme.fg("dim", "Search:")} ${this.query || this.theme.fg("muted", "type to fuzzy search")}`));
-      lines.push(row(this.theme.fg("dim", "↑/k ↓/j select · Enter open · Backspace edit · Esc/q close")));
+      lines.push(row(this.theme.fg("dim", "↑/↓ select · Enter open · Backspace edit · Esc close")));
       lines.push(row());
 
       if (this.error) {
