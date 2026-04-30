@@ -42,7 +42,7 @@ This repository provides a skill-driven work assistant for [Claude Code](https:/
 
 This repository includes custom UI extensions for [pi](https://pi.dev), the coding agent framework.
 
-The extension `.pi/extensions/work-status-widget.ts` provides a continuous status bar widget and several interactive modals to manage your workflow directly within the TUI:
+The Pi extension provides a continuous status bar widget and several interactive modals to manage your workflow directly within the TUI:
 
 | Command | Purpose |
 |---|---|
