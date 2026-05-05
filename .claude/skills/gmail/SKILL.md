@@ -78,9 +78,14 @@ gog gmail search 'is:unread'
 
 ### Read Thread Contents
 ```bash
-# Get full thread with all messages
+# Get thread with all messages; default output may truncate long bodies
 gog gmail thread get <threadId>
+
+# Get full, non-truncated message bodies when details matter
+gog gmail thread get <threadId> --full
 ```
+
+Prefer `--full` when the user asks to read an email, summarize next steps, inspect policy/process details, or when default output shows `[truncated]`.
 
 ### Download Attachments
 ```bash
