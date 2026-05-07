@@ -191,7 +191,7 @@ export class MemoryBrowserComponent implements Component {
       this.scroll = Math.min(this.scroll, maxScroll);
       const modeHint = isMarkdownFile ? `${mode} · ` : "raw · ";
       lines.push(row(`${this.theme.fg("accent", this.theme.bold(`memory/${this.openFile.relativePath}`))} ${this.theme.fg("muted", `${modeHint}${this.scroll + 1}/${Math.max(1, renderedLines.length)}`)}`));
-      lines.push(row(this.theme.fg("dim", "↑/k ↓/j scroll · PgUp/PgDn jump · r raw/markdown · Esc/b back · q close")));
+      lines.push(row(this.theme.fg("dim", "↑/k ↓/j scroll · PgUp/PgDn jump · r raw/markdown · Esc/b back")));
       lines.push(row());
       if (this.openError) {
         lines.push(row(this.theme.fg("error", `⚠ ${this.openError}`)));
