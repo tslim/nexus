@@ -66,7 +66,6 @@ The Pi extension provides a continuous status bar widget and several interactive
 │       ├── google-calendar/
 │       ├── google-drive/
 │       ├── slack/
-│       ├── granola/
 │       └── notebooklm/
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
