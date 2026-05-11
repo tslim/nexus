@@ -23,14 +23,6 @@ export class CalendarPanelComponent implements Component {
   }
 
   private async load() {
-    if (CALENDAR_CACHE.cwd === this.cwd && CALENDAR_CACHE.days && !CALENDAR_CACHE.loading) {
-      this.days = CALENDAR_CACHE.days;
-      this.error = CALENDAR_CACHE.error;
-      this.loading = false;
-      this.refresh();
-      return;
-    }
-
     this.loading = true;
     this.refresh();
     await loadUpcomingCalendarDays(this.cwd, 40);

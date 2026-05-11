@@ -74,8 +74,8 @@ function compareDateKeys(a: string, b: string): number {
 }
 
 function groupCalendarEvents(raw: unknown[], fromDateKey: string): CalendarDay[] {
-  const events: CalendarEvent[] = raw
-    .map((item) => {
+  const events = raw
+    .map((item): CalendarEvent | undefined => {
       const event = item as Record<string, unknown>;
       const start = (event.start as { dateTime?: unknown; date?: unknown } | undefined) ?? {};
       const end = (event.end as { dateTime?: unknown; date?: unknown } | undefined) ?? {};
@@ -102,7 +102,7 @@ function groupCalendarEvents(raw: unknown[], fromDateKey: string): CalendarDay[]
         startMs: startTime.startMs,
         allDay: startTime.allDay,
         dayKey,
-      } satisfies CalendarEvent;
+      };
     })
     .filter((event): event is CalendarEvent => Boolean(event))
     .sort((a, b) => a.startMs - b.startMs || a.summary.localeCompare(b.summary));
