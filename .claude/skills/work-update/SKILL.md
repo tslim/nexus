@@ -71,7 +71,7 @@ Gather recent signals from available sources:
 - email
 - documents
 - calendar
-- notes
+- meeting notes only when provided by the user or available through a supported readable/exported source
 
 Use the activity scan to surface:
 - task updates
