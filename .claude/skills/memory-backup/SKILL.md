@@ -5,7 +5,7 @@ description: Backup CLAUDE.md, TASKS.md, and memory/ to a private Git repo
 
 # Memory Backup
 
-Run the backup script for the current workspace. This command only backs up:
+Run the backup script for the current workspace. This command syncs only:
 - `CLAUDE.md`
 - `TASKS.md`
 - `memory/`
@@ -13,8 +13,10 @@ Run the backup script for the current workspace. This command only backs up:
 ## Usage
 
 ```bash
-/memory-backup
-/memory-backup --dry-run
+/memory-backup            # push local memory to backup repo
+/memory-backup --pull     # pull latest backup into this workspace
+/memory-backup --sync     # pull latest, then push local memory
+/memory-backup --dry-run  # preview push
 ```
 
 ## Setup
@@ -41,9 +43,11 @@ Use Bash to run:
 bash .claude/skills/memory-backup/backup.sh
 ```
 
-If the user asks for a preview, run:
+Other modes:
 
 ```bash
+bash .claude/skills/memory-backup/backup.sh --pull
+bash .claude/skills/memory-backup/backup.sh --sync
 bash .claude/skills/memory-backup/backup.sh --dry-run
 ```
 
@@ -53,10 +57,10 @@ The script is the only thing that should perform the backup. Do not manually rec
 
 - Loads `MEMORY_BACKUP_DIR` from the environment or workspace `.env`
 - Verifies the destination is a Git repo separate from the source workspace
-- Mirrors only `CLAUDE.md`, `TASKS.md`, and `memory/`
-- Removes deleted files from the mirrored backup set
-- Creates a Git commit only when the backup content changed
-- Pushes to the backup repo's configured remote
+- Push mode: mirrors only `CLAUDE.md`, `TASKS.md`, and `memory/` into the backup repo, commits only if changed, then pushes
+- Pull mode: runs `git pull --ff-only` in the backup repo, then copies those files into the workspace
+- Sync mode: pull first, then push
+- Pull/sync refuse to overwrite local changes under `CLAUDE.md`, `TASKS.md`, or `memory/`
 
 ## Notes
 

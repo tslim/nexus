@@ -2,9 +2,13 @@
 
 set -euo pipefail
 
-DRY_RUN=0
+MODE="push"
 if [[ "${1-}" == "--dry-run" ]]; then
-  DRY_RUN=1
+  MODE="dry-run"
+elif [[ "${1-}" == "--pull" ]]; then
+  MODE="pull"
+elif [[ "${1-}" == "--sync" ]]; then
+  MODE="sync"
 elif [[ $# -gt 0 ]]; then
   printf 'Unsupported argument: %s\n' "$1" >&2
   exit 1
@@ -61,13 +65,8 @@ case "$BACKUP_DIR_REAL" in
     ;;
 esac
 
-copy_path() {
-  local relative_path="$1"
-  local source_path="$SOURCE_DIR_REAL/$relative_path"
-  local dest_path="$BACKUP_DIR_REAL/$relative_path"
-
-  remove_path() {
-    python3 - "$1" <<'PY'
+remove_path() {
+  python3 - "$1" <<'PY'
 import os
 import shutil
 import sys
@@ -78,7 +77,14 @@ if os.path.isdir(path) and not os.path.islink(path):
 elif os.path.lexists(path):
     os.unlink(path)
 PY
-  }
+}
+
+sync_path() {
+  local from_root="$1"
+  local to_root="$2"
+  local relative_path="$3"
+  local source_path="$from_root/$relative_path"
+  local dest_path="$to_root/$relative_path"
 
   if [[ -d "$source_path" ]]; then
     if [[ -f "$dest_path" || -L "$dest_path" ]]; then
@@ -102,7 +108,26 @@ PY
   fi
 }
 
-if [[ $DRY_RUN -eq 1 ]]; then
+pull_latest() {
+  printf 'Pulling latest backup repo...\n'
+  git -C "$BACKUP_DIR_REAL" pull --ff-only
+
+  if git -C "$SOURCE_DIR_REAL" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local local_changes
+    local_changes="$(git -C "$SOURCE_DIR_REAL" status --porcelain -- CLAUDE.md TASKS.md memory)"
+    if [[ -n "$local_changes" ]]; then
+      printf 'Local memory files have changes; pull skipped to avoid overwrite:\n%s\n' "$local_changes" >&2
+      exit 1
+    fi
+  fi
+
+  sync_path "$BACKUP_DIR_REAL" "$SOURCE_DIR_REAL" "CLAUDE.md"
+  sync_path "$BACKUP_DIR_REAL" "$SOURCE_DIR_REAL" "TASKS.md"
+  sync_path "$BACKUP_DIR_REAL" "$SOURCE_DIR_REAL" "memory"
+  printf 'Pull complete.\n'
+}
+
+if [[ "$MODE" == "dry-run" ]]; then
   printf 'Dry run only. No files will be changed.\n'
   printf 'Source: %s\n' "$SOURCE_DIR_REAL"
   printf 'Backup: %s\n' "$BACKUP_DIR_REAL"
@@ -116,9 +141,17 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
-copy_path "CLAUDE.md"
-copy_path "TASKS.md"
-copy_path "memory"
+if [[ "$MODE" == "pull" || "$MODE" == "sync" ]]; then
+  pull_latest
+fi
+
+if [[ "$MODE" == "pull" ]]; then
+  exit 0
+fi
+
+sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "CLAUDE.md"
+sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "TASKS.md"
+sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "memory"
 
 git -C "$BACKUP_DIR_REAL" add -A -- CLAUDE.md TASKS.md memory
 
