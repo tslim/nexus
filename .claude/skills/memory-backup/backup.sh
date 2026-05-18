@@ -48,15 +48,64 @@ if [[ ! -d "$BACKUP_DIR_REAL/.git" ]]; then
   exit 1
 fi
 
+refresh_git_index() {
+  local repo_dir="$1"
+  local rc
+  # Refresh cached stat information before clean checks. This avoids false
+  # positives on filesystems with delayed metadata updates (for example iCloud).
+  set +e
+  git -C "$repo_dir" update-index -q --refresh
+  rc=$?
+  set -e
+  if [[ $rc -gt 1 ]]; then
+    printf 'Failed to refresh Git index in %s (git update-index exit %s).\n' "$repo_dir" "$rc" >&2
+    exit "$rc"
+  fi
+}
+
+has_unstaged_changes() {
+  local repo_dir="$1"
+  local rc
+  set +e
+  git -C "$repo_dir" diff --quiet
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    return 1
+  elif [[ $rc -eq 1 ]]; then
+    return 0
+  fi
+  printf 'Failed to check unstaged changes in %s (git diff exit %s).\n' "$repo_dir" "$rc" >&2
+  exit "$rc"
+}
+
+has_staged_changes() {
+  local repo_dir="$1"
+  local rc
+  set +e
+  git -C "$repo_dir" diff --cached --quiet
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    return 1
+  elif [[ $rc -eq 1 ]]; then
+    return 0
+  fi
+  printf 'Failed to check staged changes in %s (git diff --cached exit %s).\n' "$repo_dir" "$rc" >&2
+  exit "$rc"
+}
+
 backup_tracked_changes=false
 backup_staged_changes=false
 backup_untracked_files=""
 
-if ! git -C "$BACKUP_DIR_REAL" diff --quiet; then
+refresh_git_index "$BACKUP_DIR_REAL"
+
+if has_unstaged_changes "$BACKUP_DIR_REAL"; then
   backup_tracked_changes=true
 fi
 
-if ! git -C "$BACKUP_DIR_REAL" diff --cached --quiet; then
+if has_staged_changes "$BACKUP_DIR_REAL"; then
   backup_staged_changes=true
 fi
 
