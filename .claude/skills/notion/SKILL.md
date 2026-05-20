@@ -1,6 +1,6 @@
 ---
 name: notion
-description: Use Notion through the official `ntn` CLI: search, read/write pages, data sources, Markdown, files, and Workers.
+description: "Use Notion through the official ntn CLI: search, read/write pages, data sources, Markdown, files, and Workers."
 tools: [Bash]
 ---
 
@@ -73,6 +73,8 @@ If this is missing, Notion may return `404` even when the page exists.
 
 ## Workflow Rules
 
+- Before using Notion, check whether `ntn` is installed with `command -v ntn`.
+- If `ntn` is missing, refer the user to the Installation section and stop unless they ask you to install it.
 - Start Notion command sessions by loading the project `.env` and exporting `NOTION_API_TOKEN="$NOTION_API_KEY"`.
 - Prefer `/markdown` endpoints when reading or editing page content for summarization or agent-friendly processing.
 - Use block endpoints only when exact Notion block structure matters.
@@ -479,7 +481,6 @@ ntn workers webhooks list
 
 ## Troubleshooting
 
-- If `ntn` is missing, install it before continuing.
 - If Notion returns `404`, verify the target page/database is shared with the integration.
 - If authentication fails, verify project `.env` contains `NOTION_API_KEY`, then export `NOTION_API_TOKEN="$NOTION_API_KEY"`.
 - If `ntn` prompts for keychain access, set `NOTION_KEYRING=0`.
