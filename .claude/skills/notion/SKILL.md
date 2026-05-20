@@ -15,20 +15,18 @@ Do **not** use a curl/HTTP fallback for normal work. If `ntn` is unavailable, as
 Required environment variable, usually stored in the project `.env`:
 
 ```bash
-NOTION_API_KEY=ntn_your_key_here
+NOTION_API_TOKEN=ntn_your_token_here
 ```
 
-Before running `ntn` commands from this project, load `.env` and map the token variable that `ntn` expects:
+This project includes an npm helper that loads `.env`:
 
 ```bash
-set -a
-source .env
-set +a
-export NOTION_API_TOKEN="$NOTION_API_KEY"
-export NOTION_KEYRING=0
+npm run --silent ntn -- api v1/users
 ```
 
-If `.env` is missing or does not contain `NOTION_API_KEY`, ask the user to add it before continuing.
+Prefer this helper for agent workflows.
+
+If `.env` is missing or does not contain `NOTION_API_TOKEN`, ask the user to add it before continuing.
 
 Optional `.env` entry:
 
@@ -75,7 +73,7 @@ If this is missing, Notion may return `404` even when the page exists.
 
 - Before using Notion, check whether `ntn` is installed with `command -v ntn`.
 - If `ntn` is missing, refer the user to the Installation section and stop unless they ask you to install it.
-- Start Notion command sessions by loading the project `.env` and exporting `NOTION_API_TOKEN="$NOTION_API_KEY"`.
+- Prefer the project helper: `npm run --silent ntn -- ...` so `.env` is loaded automatically. Use `--silent` when piping JSON to `jq`.
 - Prefer `/markdown` endpoints when reading or editing page content for summarization or agent-friendly processing.
 - Use block endpoints only when exact Notion block structure matters.
 - For data sources/databases, use `/data_sources` query endpoints.
@@ -86,11 +84,17 @@ If this is missing, Notion may return `404` even when the page exists.
 
 ## `ntn api` Syntax
 
+Official guide: <https://developers.notion.com/cli/guides/api-requests>
+
+`ntn api` adds `Authorization` and `Notion-Version` headers automatically. It sends `GET` by default unless request body input is present; body input makes `POST` the default unless `-X` overrides it.
+
+Basic GET:
+
 ```bash
 ntn api v1/users
 ```
 
-Inline body:
+Inline body fields:
 
 ```bash
 ntn api v1/pages \
@@ -108,10 +112,29 @@ Syntax reference:
 
 | Syntax | Meaning |
 |---|---|
-| `key=value` | String value |
-| `key[nested]=value` | Nested object |
-| `key:=value` | Typed value: boolean, number, null, array |
-| `--json -` | Read JSON request body from stdin |
+| `path=value` | Body field with a string value |
+| `path:=json` | Body field parsed as JSON: boolean, number, string, array, object, or `null` |
+| `name==value` | Query parameter |
+| `Header:Value` | Request header |
+
+Nested body paths support bracket and dot notation. Prefer bracket notation for property names with spaces or punctuation.
+
+JSON request bodies:
+
+- Use stdin JSON directly: `cat body.json | ntn api v1/pages`
+- Or use `--data '{"query":"roadmap","page_size":10}'`
+- Do **not** use `--json -`; current `ntn` expects stdin JSON directly.
+- Use exactly one body source per request: stdin JSON, `--data`, or inline body fields. Query parameters and headers can still be combined with any one body source.
+
+Inspect/debug helpers:
+
+```bash
+ntn api ls
+ntn api v1/comments --help
+ntn api v1/comments --spec -X POST
+ntn api v1/comments --docs -X POST
+ntn --verbose api v1/pages/$PAGE_ID
+```
 
 ## Search
 
@@ -198,7 +221,7 @@ ntn api v1/data_sources/{data_source_id}/query -X POST \
 Use JSON for compound filters, sorts, or complex request bodies:
 
 ```bash
-cat <<'JSON' | ntn api v1/data_sources/{data_source_id}/query -X POST --json -
+cat <<'JSON' | ntn api v1/data_sources/{data_source_id}/query -X POST
 {
   "filter": {
     "property": "Status",
@@ -230,7 +253,7 @@ ntn api v1/pages \
 Prefer JSON for schemas:
 
 ```bash
-cat <<'JSON' | ntn api v1/data_sources -X POST --json -
+cat <<'JSON' | ntn api v1/data_sources -X POST
 {
   "parent": {
     "page_id": "xxx"
@@ -288,7 +311,7 @@ is_inline:=true
 Append blocks to a page:
 
 ```bash
-cat <<'JSON' | ntn api v1/blocks/{page_id}/children -X PATCH --json -
+cat <<'JSON' | ntn api v1/blocks/{page_id}/children -X PATCH
 {
   "children": [
     {
@@ -482,6 +505,6 @@ ntn workers webhooks list
 ## Troubleshooting
 
 - If Notion returns `404`, verify the target page/database is shared with the integration.
-- If authentication fails, verify project `.env` contains `NOTION_API_KEY`, then export `NOTION_API_TOKEN="$NOTION_API_KEY"`.
+- If authentication fails, verify project `.env` contains `NOTION_API_TOKEN`.
 - If `ntn` prompts for keychain access, set `NOTION_KEYRING=0`.
 - If workspace selection prompts block automation, set `NOTION_WORKSPACE_ID`.

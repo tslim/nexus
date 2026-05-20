@@ -1,5 +1,9 @@
 {
+  "scripts": {
+    "ntn": "set -a; . ./.env; set +a; ntn"
+  },
   "dependencies": {
-    "@slack/web-api": "^7.15.0"
+    "@slack/web-api": "^7.15.0",
+    "ntn": "^0.14.1"
   }
 }
