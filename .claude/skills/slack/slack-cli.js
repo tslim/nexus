@@ -389,13 +389,114 @@ const commands = {
 
   async search(args) {
     const { positional, flags } = parseArgs(args);
-    const query = positional.join(" ").trim();
+    let query = positional.join(" ").trim();
     if (!query) throw new Error("Search query required");
 
     const asJson = !!flags.json;
-    const limit = toInt(flags.limit, 50);
-    const oldest = flags.days ? toEpochDaysAgo(flags.days) : null;
+    const limit = toInt(flags.limit, 100); // Slack API default is 100, max 1000
+    const oldestTs = flags.days ? toEpochDaysAgo(flags.days) : null;
 
+    // Determine if we should use API or local scan
+    let useApi = true;
+    if (flags.channels) {
+      const channelList = flags.channels
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (channelList.length === 1) {
+        // Single channel: API supports 'in:' modifier
+      } else if (channelList.length > 1) {
+        // Multiple channels: API doesn't support OR, use local scan
+        console.warn("Warning: Multiple channels specified; falling back to local scan.");
+        useApi = false;
+      }
+    }
+
+    // Build Search API query (only used when useApi is true)
+    let searchQuery = query;
+    if (useApi && flags.channels) {
+      const channelList = flags.channels
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (channelList.length === 1) {
+        searchQuery += ` in:${channelList[0]}`;
+      }
+    }
+    if (oldestTs) {
+      searchQuery += ` ts:>${oldestTs}`;
+    }
+
+    if (useApi) {
+      try {
+        // Try Slack Search API first
+        const result = await web.search.messages({
+          query: searchQuery,
+          sort: "timestamp",
+          sort_dir: "desc",
+          count: Math.min(limit, 100), // per page; we'll handle pagination if needed
+        });
+
+        if (!result.ok) {
+          throw new Error(result.error || "Unknown error from search.messages");
+        }
+
+        const matches = result.messages.matches || [];
+        const total = matches.length;
+
+        // Resolve user IDs for messages
+        const userIds = [...new Set(matches.map((m) => m.user).filter(Boolean))];
+        const userMap = {};
+        if (userIds.length > 0) {
+          const users = await resolveUsers(userIds);
+          for (const u of users) {
+            userMap[u.user_id] = u;
+          }
+        }
+
+        const rows = matches
+          .map((m) => ({
+            channel_id: m.channel.id,
+            ts: m.ts,
+            time: tsToLocal(m.ts),
+            user_id: m.user,
+            user_name: (userMap[m.user]?.display_name || userMap[m.user]?.real_name || userMap[m.user]?.username || null),
+            bot_id: m.bot_id || null,
+            text: m.text,
+            thread_ts: m.thread_ts || null,
+            reply_count: m.reply_count || 0,
+            has_files: !!(m.files && m.files.length),
+            files: (m.files || []).map((f) => ({
+              id: f.id,
+              name: f.name,
+              size: f.size,
+            })),
+          }))
+          .slice(0, limit); // Apply limit after resolving
+
+        if (asJson) {
+          printResult(
+            {
+              mode: "api",
+              query: searchQuery,
+              total,
+              count: rows.length,
+              messages: rows,
+              // Note: Slack API may return more matches; we limit client-side
+            },
+            true,
+          );
+        } else {
+          printHumanMessages(rows, true /* showChannel */);
+        }
+        return;
+      } catch (err) {
+        // Fall back to local scan if search:read missing or API error
+        console.warn(`Warning: Search API failed (${err.message}); falling back to local scan.`);
+      }
+    }
+
+    // ---------- FALLBACK: Local scan (original logic) ----------
     let channelIds = [];
     let channelSource = "provided";
 
@@ -421,7 +522,7 @@ const commands = {
 
     for (const channelId of channelIds) {
       try {
-        const messages = await fetchHistory(channelId, { limit, oldest });
+        const messages = await fetchHistory(channelId, { limit: 200, oldest: oldestTs }); // scan more to avoid missing due to limit
         const matches = messages
           .filter((m) => (m.text || "").toLowerCase().includes(needle))
           .map((m) => ({

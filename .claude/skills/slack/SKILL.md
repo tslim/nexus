@@ -20,7 +20,7 @@ node .claude/skills/slack/slack-cli.js <command> [args]
 |---------|-------------|---------|
 | `channels [--filter regex] [--limit N] [--types types] [--json]` | List channels with pagination, optional regex filtering, and JSON output | `node slack-cli.js channels --filter "project" --json` |
 | `history <channelId> [--limit N] [--days N] [--oldest ts] [--latest ts] [--json]` | Read channel history with filters | `node slack-cli.js history C0A11MKGDT2 --days 7 --json` |
-| `search <query> [--channels ids] [--days N] [--limit N] [--channel-limit N] [--json]` | Search recent channel histories locally by query; defaults to recent messages across listed accessible channels and avoids Slack Search API scopes | `node slack-cli.js search "blocker" --channels C0A1K7R9W74` |
+| `search <query> [--channels ids] [--days N] [--limit N] [--channel-limit N] [--json]` | Search using Slack's `web.search.messages` API; falls back to local channel history scan if `search:read` scope is missing or multiple channels are specified | `node slack-cli.js search "blocker" --channels C0A1K7R9W74` |
 | `messages-filter <channelId> --pattern <regex> [--days N] [--json]` | Filter channel messages by regex | `node slack-cli.js messages-filter C0A1K7R9W74 --pattern "blocked|waiting on"` |
 | `threads <channelId> [--days N] [--json]` | List parent messages with replies | `node slack-cli.js threads C0A11MKGDT2 --days 14` |
 | `thread-get <channelId> <threadTs> [--json]` | Read full thread (parent + replies) | `node slack-cli.js thread-get C0A11MKGDT2 123.456` |
@@ -47,6 +47,7 @@ Get your token from https://api.slack.com/apps:
    - `channels:read`, `groups:read`, `users:read`
    - `chat:write`, `im:write`
    - `files:read`
+   - `search:read` (enables `web.search.messages`)
 3. Install to workspace (as yourself)
 4. Copy "User OAuth Token" (starts with `xoxp-`)
 5. Create `.env` file and save your token in it:
@@ -67,7 +68,8 @@ Get your token from https://api.slack.com/apps:
 | `web.files.list()` | List files in channel |
 | `web.files.info()` | Get file metadata |
 | `web.users.info()` | Get user details |
-| local `conversations.history()` scan | Search recent channel histories without Slack Search API scopes |
+| `web.search.messages()` | Full-text search across channels (requires `search:read` scope) |
+| local `conversations.history()` scan | Fallback when `search:read` scope is missing or multiple channels are specified |
 | `web.auth.test()` | Verify token |
 
 ## Response Format
