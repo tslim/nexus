@@ -62,9 +62,22 @@ This repo also defines project-only subagents for the [`@tintinweb/pi-subagents`
 | `task-reconciler` | Compares task candidates against `TASKS.md` and returns triage recommendations: already tracked, new candidate, stale, completion signal, waiting-on change, duplicate, or unclear. | No |
 | `memory-curator` | Classifies candidate memory updates against `CLAUDE.md` and `memory/`, recommending safe existing-page updates, glossary/hot-cache candidates, new-page confirmations, or ignored transient noise. | No |
 
+### `/scan` prompt template
+
+This repo includes a project-local Pi prompt template:
+
+```text
+/scan
+```
+
+It schedules `activity-scanner` to run hourly in the current Pi session. Each run scans Slack, Gmail, Calendar, `TASKS.md`, and relevant memory for work-update signals from the last hour, returning concise high-confidence findings with scanner metadata.
+
+Use `/scan` in the Pi session you want to treat as your work-monitoring session. Scheduled runs are session-scoped, only fire while that session is active/resumed, and do not replay missed runs. Later, `/work-update` can reuse visible hourly scanner outputs and only perform catch-up scans for uncovered sources or time windows.
+
 Design rules:
 - Subagents collect and classify only; the parent workflow remains responsible for user confirmation and file edits.
-- `work-update` may spawn `activity-scanner` agents in parallel, then use `task-reconciler` and `memory-curator` before applying confirmed task/memory changes.
+- `work-update` may spawn or reuse `activity-scanner` agents, then use `task-reconciler` and `memory-curator` before applying confirmed task/memory changes.
+- `meeting-notes` may use `task-reconciler` and `memory-curator` to classify extracted action items and durable updates before asking for confirmation.
 - `daily-sync` may use `activity-scanner` only to draft suggested standup answers; the parent agent still asks the 3 required questions and posts the confirmed Slack reply.
 
 If you add or rename agents, restart Pi or start a new session so the `Agent` tool schema and `/agents` menu refresh.
@@ -95,6 +108,8 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 │   │   ├── task-reconciler.md
 │   │   └── memory-curator.md
 │   ├── extensions/
+│   ├── prompts/
+│   │   └── scan.md
 │   └── settings.json
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
@@ -117,8 +132,9 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 4. Use `/work-update` regularly to keep tasks and memory fresh.
 5. Use `/daily-sync` to post your standup update to the right Slack thread.
 6. Optional for Pi: install `@tintinweb/pi-subagents` to enable the project-local agents in `.pi/agents/`.
-7. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
-8. Optional: configure Notion and run `/journal-sync` to import recent Journal entries into memory.
+7. Optional for Pi: run `/scan` in your work-monitoring session to schedule hourly read-only activity scans.
+8. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
+9. Optional: configure Notion and run `/journal-sync` to import recent Journal entries into memory.
 
 ## Prerequisites
 

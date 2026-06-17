@@ -58,6 +58,23 @@ Use the loaded skills' workflows to read relevant task and memory context.
 
 At minimum, inspect the current task list and memory index / hot cache well enough to infer likely context from the pasted notes.
 
+### 2a. Optional Project Subagents
+
+If the `Agent` tool is available and project-local agents exist under `.pi/agents/`, use them for classification when the notes contain multiple action items, project updates, durable decisions, or unclear references.
+
+Project-local agents useful for this workflow:
+- `task-reconciler` - compares extracted task candidates against `TASKS.md` and prepares triage recommendations
+- `memory-curator` - classifies extracted durable update candidates against `CLAUDE.md` and `memory/`
+- `activity-scanner` - optional read-only scanner for external context, only when the pasted notes need corroboration or the user asks to check Slack/email/calendar/docs
+
+Use subagents this way:
+1. First extract candidate decisions, action items, task candidates, memory candidates, and unclear references from the pasted notes in the parent agent.
+2. Pass task-like candidates to `task-reconciler` before asking the user to confirm task edits.
+3. Pass memory-like candidates to `memory-curator` before applying safe memory updates or asking for confirmation.
+4. Use `activity-scanner` only for targeted external lookup; do not scan external sources by default for simple pasted notes.
+
+Subagents must only collect, compare, and classify. The parent agent remains responsible for context confirmation, user confirmation, edits to `TASKS.md`, edits to `CLAUDE.md` or `memory/`, memory logging, and backup when required.
+
 ### 3. Infer Context
 
 Identify likely project, people, topics, and related tasks from the pasted notes.
@@ -87,6 +104,12 @@ After the user confirms or corrects the context, extract:
 - task candidates
 - memory update candidates
 - open questions / unclear references
+
+For non-trivial notes, reconcile and curate before presenting the final edit proposal:
+- send task candidates and relevant context to `task-reconciler` when available
+- send memory candidates, decisions, and durable context updates to `memory-curator` when available
+- merge subagent recommendations into the parent agent's confirmation prompt
+- skip subagents for very small/simple notes where direct processing is clearer
 
 Example:
 
