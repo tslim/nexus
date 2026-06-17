@@ -52,6 +52,23 @@ The Pi extension provides a continuous status bar widget and several interactive
 | `/calendar` | Overlay showing upcoming Google Calendar events via `gog`. |
 | `/logs` | Interactive modal to page through `memory/log.md` entries (Older/Newer), keeping you aware of recent context changes. |
 
+## Project-local Pi Subagents
+
+This repo also defines project-only subagents for the [`@tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) extension. They live under `.pi/agents/`, so they apply only to this workspace and are not installed globally.
+
+| Agent | Purpose | Writes? |
+|---|---|---|
+| `activity-scanner` | General read-only scanner for Slack, Gmail, Calendar, Drive, Notion, `TASKS.md`, and memory context. Used by workflows such as `work-update` and optionally `daily-sync` to collect evidence without consuming the parent agent's context. | No |
+| `task-reconciler` | Compares task candidates against `TASKS.md` and returns triage recommendations: already tracked, new candidate, stale, completion signal, waiting-on change, duplicate, or unclear. | No |
+| `memory-curator` | Classifies candidate memory updates against `CLAUDE.md` and `memory/`, recommending safe existing-page updates, glossary/hot-cache candidates, new-page confirmations, or ignored transient noise. | No |
+
+Design rules:
+- Subagents collect and classify only; the parent workflow remains responsible for user confirmation and file edits.
+- `work-update` may spawn `activity-scanner` agents in parallel, then use `task-reconciler` and `memory-curator` before applying confirmed task/memory changes.
+- `daily-sync` may use `activity-scanner` only to draft suggested standup answers; the parent agent still asks the 3 required questions and posts the confirmed Slack reply.
+
+If you add or rename agents, restart Pi or start a new session so the `Agent` tool schema and `/agents` menu refresh.
+
 ## Repository Structure
 
 ```text
@@ -72,6 +89,13 @@ The Pi extension provides a continuous status bar widget and several interactive
 │       ├── slack/
 │       ├── notion/
 │       └── notebooklm/
+├── .pi/
+│   ├── agents/
+│   │   ├── activity-scanner.md
+│   │   ├── task-reconciler.md
+│   │   └── memory-curator.md
+│   ├── extensions/
+│   └── settings.json
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
 ├── package.json     # Node dependencies for local skill tooling
@@ -92,8 +116,9 @@ The Pi extension provides a continuous status bar widget and several interactive
 3. Open `dashboard.html` from your file browser.
 4. Use `/work-update` regularly to keep tasks and memory fresh.
 5. Use `/daily-sync` to post your standup update to the right Slack thread.
-6. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
-7. Optional: configure Notion and run `/journal-sync` to import recent Journal entries into memory.
+6. Optional for Pi: install `@tintinweb/pi-subagents` to enable the project-local agents in `.pi/agents/`.
+7. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
+8. Optional: configure Notion and run `/journal-sync` to import recent Journal entries into memory.
 
 ## Prerequisites
 

@@ -66,6 +66,45 @@ Requires confirmation:
 
 Before checking a source, look for and load the relevant skill from `.claude/skills` when available.
 
+#### Optional Project Subagents
+
+If the `Agent` tool is available and project-local agents exist under `.pi/agents/`, prefer using them for read-only collection and classification when the scan spans multiple sources or would otherwise consume substantial context.
+
+Project-local agents useful for this workflow:
+- `activity-scanner` - general read-only scanner for Slack, Gmail, Calendar, Drive, Notion, or a specific project/source scope
+- `task-reconciler` - compares candidate tasks against `TASKS.md` and prepares task triage recommendations
+- `memory-curator` - classifies findings for durable memory updates
+
+Use subagents this way:
+1. Before spawning new scanners, check the current conversation for completed `activity-scanner` outputs, especially scheduled hourly runs.
+2. Reuse existing scanner outputs when their `## Scanner metadata` shows they cover the current `work-update` scope, sources, and time window.
+3. Spawn new `activity-scanner` agents only for missing sources, uncovered time windows, stale/unclear outputs, low-confidence findings, or explicit user refresh requests.
+4. Aggregate reused and newly scanned outputs in the parent agent.
+5. Pass the aggregated task-like findings to `task-reconciler` before asking the user to confirm task edits.
+6. Pass the aggregated memory-like findings to `memory-curator` before applying safe memory updates or asking for confirmation.
+
+#### Reusing Hourly Scheduled Scanner Results
+
+If `activity-scanner` runs hourly and the user runs `work-update` at end of day, do not treat older same-day scanner outputs as stale merely because they are more than a few hours old. Instead:
+- Reuse all visible completed scanner outputs from the current workday, or since the last known `work-update`, when their metadata covers relevant sources/time windows.
+- Deduplicate repeated findings across hourly runs.
+- Identify coverage gaps by source and time window.
+- Run a small catch-up scan only for gaps, commonly "since the latest scanner run" or for sources not covered by scheduled scans.
+- If scanner outputs are not visible in the current conversation and no agent IDs are available to retrieve, fall back to normal scanning.
+
+When reusing scanner outputs, mention it in the final report, for example:
+
+```text
+Reused scanner outputs:
+- Slack/email/calendar scans from 09:00-17:00 covering hourly windows
+
+New scans:
+- Catch-up scan from 17:00-now
+- Recent docs, because scheduled scans did not cover Drive/Notion
+```
+
+Subagents must only collect and classify. The parent agent remains responsible for user confirmation, edits to `TASKS.md`, edits to `CLAUDE.md` or `memory/`, and running `memory-backup` when required.
+
 Gather recent signals from available sources:
 - chat
 - email

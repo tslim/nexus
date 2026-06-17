@@ -29,6 +29,17 @@ Before asking the 3 required questions, draft suggested answers using:
 - `TASKS.md` status and recent edits
 - `memory/projects/*.md` and `memory/people/*.md` context relevant to active work
 
+### Optional Project Subagent
+
+If the `Agent` tool is available and `.pi/agents/activity-scanner.md` exists, you may use the project-local `activity-scanner` agent to gather read-only evidence for suggested answers when current context is thin or the scan would consume substantial context.
+
+Use it only for collection/drafting, for example:
+- scan recent Slack standup/thread history to find the prior daily update
+- scan `TASKS.md` and relevant project memory for likely today/focus items
+- scan recent session/work signals for completed items and blockers
+
+The `activity-scanner` must not post to Slack, edit files, or mutate external systems. The parent agent remains responsible for asking the 3 required questions with the `question` tool and posting the final confirmed update.
+
 ### Prior Update Continuity
 
 Before drafting suggestions:
