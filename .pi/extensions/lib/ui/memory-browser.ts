@@ -7,6 +7,136 @@ import { fuzzyScore, type MemoryFile } from "../memory";
 
 type LoadIntoContextHandler = (file: MemoryFile, text: string) => void;
 
+function decodeCodePoint(match: string, code: string, radix: number): string {
+  const value = Number.parseInt(code, radix);
+  if (!Number.isFinite(value)) return match;
+  try {
+    return String.fromCodePoint(value);
+  } catch {
+    return match;
+  }
+}
+
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (match, code: string) => decodeCodePoint(match, code, 10))
+    .replace(/&#x([0-9a-f]+);/gi, (match, code: string) => decodeCodePoint(match, code, 16));
+}
+
+function getHtmlAttribute(tag: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = tag.match(new RegExp(`${escaped}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i"));
+  return match ? decodeHtmlEntities(match[2] ?? "").trim() : undefined;
+}
+
+function stripHtmlTags(input: string): string {
+  return decodeHtmlEntities(input.replace(/<[^>]*>/g, ""));
+}
+
+function htmlInlineToMarkdown(input: string): string {
+  return input
+    .replace(/<img\b([^>]*)>/gi, (_match, attrs: string) => {
+      const alt = getHtmlAttribute(attrs, "alt");
+      return alt ? `[Image: ${alt}]` : "";
+    })
+    .replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (_match, attrs: string, label: string) => {
+      const text = stripHtmlTags(label).replace(/\s+/g, " ").trim();
+      const href = getHtmlAttribute(attrs, "href");
+      if (!text) return href ?? "";
+      return href ? `[${text}](${href})` : text;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .split(/\r?\n/)
+    .map((line) => decodeHtmlEntities(line).replace(/[\t ]+/g, " ").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function firstHtmlTagContent(html: string, tagName: string): string | undefined {
+  const match = html.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i"));
+  const content = match ? htmlInlineToMarkdown(match[1] ?? "") : "";
+  return content || undefined;
+}
+
+function firstMetaContent(html: string, names: string[]): string | undefined {
+  const metaTags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  for (const tag of metaTags) {
+    const key = getHtmlAttribute(tag, "name") ?? getHtmlAttribute(tag, "property");
+    if (!key || !names.includes(key.toLowerCase())) continue;
+    const content = getHtmlAttribute(tag, "content");
+    if (content) return content;
+  }
+  return undefined;
+}
+
+function htmlToMarkdownText(html: string): string {
+  const normalized = html.replace(/\r\n?/g, "\n");
+  const title = firstHtmlTagContent(normalized, "title");
+  const description = firstMetaContent(normalized, ["description", "og:description"]);
+  const bodyMatch = normalized.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  let working = bodyMatch ? bodyMatch[1] ?? "" : normalized;
+
+  working = working
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, "")
+    .replace(/<svg\b[\s\S]*?<\/svg>/gi, "");
+
+  working = working
+    .replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi, (_match, level: string, content: string) => {
+      const text = htmlInlineToMarkdown(content);
+      return text ? `\n\n${"#".repeat(Number.parseInt(level, 10))} ${text}\n\n` : "\n\n";
+    })
+    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, (_match, content: string) => {
+      const text = htmlInlineToMarkdown(content);
+      return text ? `\n- ${text}\n` : "\n";
+    })
+    .replace(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi, (_match, content: string) => {
+      const text = htmlInlineToMarkdown(content);
+      return text ? `${text} | ` : "";
+    })
+    .replace(/<tr\b[^>]*>|<\/tr>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|section|article|header|footer|main|aside|nav|ul|ol|table|blockquote)>/gi, "\n\n")
+    .replace(/<(p|div|section|article|header|footer|main|aside|nav|ul|ol|table|blockquote)\b[^>]*>/gi, "\n\n");
+
+  working = working
+    .replace(/<img\b([^>]*)>/gi, (_match, attrs: string) => {
+      const alt = getHtmlAttribute(attrs, "alt");
+      return alt ? `[Image: ${alt}]` : "";
+    })
+    .replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (_match, attrs: string, label: string) => {
+      const text = stripHtmlTags(label).replace(/\s+/g, " ").trim();
+      const href = getHtmlAttribute(attrs, "href");
+      if (!text) return href ?? "";
+      return href ? `[${text}](${href})` : text;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .split(/\r?\n/)
+    .map((line) => decodeHtmlEntities(line).replace(/[\t ]+/g, " ").trim())
+    .join("\n");
+
+  const lines = working
+    .replace(/\r\n?/g, "\n")
+    .split(/\n/)
+    .map((line) => line.replace(/[\t ]+/g, " ").trim())
+    .filter((line, index, lines) => line || lines[index - 1]);
+
+  const preface = [title ? `# ${title}` : undefined, description ? `> ${description}` : undefined]
+    .filter(Boolean)
+    .join("\n\n");
+  const body = lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return [preface, body].filter(Boolean).join("\n\n").trim();
+}
+
 export class MemoryBrowserComponent implements Component {
   private query = "";
   private selected = 0;
@@ -107,15 +237,27 @@ export class MemoryBrowserComponent implements Component {
     return this.openFile ? /\.md(?:own)?$/i.test(this.openFile.relativePath) : false;
   }
 
+  private isOpenHtmlFile(): boolean {
+    return this.openFile ? /\.html?$/i.test(this.openFile.relativePath) : false;
+  }
+
+  private isOpenLoadableTextFile(): boolean {
+    return this.openFile ? /\.(md|mdown|txt|html?)$/i.test(this.openFile.relativePath) : false;
+  }
+
   private loadOpenFileIntoContext() {
-    if (!this.openFile || !this.isOpenMarkdownFile()) return;
+    if (!this.openFile || !this.isOpenLoadableTextFile()) return;
     if (this.openError) {
       this.loadMessage = "Cannot load file with read error.";
       this.refresh();
       return;
     }
-    this.onLoadIntoContext?.(this.openFile, this.openText);
-    this.loadMessage = `Loaded memory/${this.openFile.relativePath} into session context.`;
+    const isHtml = this.isOpenHtmlFile();
+    const contextText = isHtml ? htmlToMarkdownText(this.openText) : this.openText;
+    this.onLoadIntoContext?.(this.openFile, contextText || this.openText);
+    this.loadMessage = isHtml
+      ? `Loaded cleaned text from memory/${this.openFile.relativePath} into session context.`
+      : `Loaded memory/${this.openFile.relativePath} into session context.`;
     this.refresh();
   }
 
@@ -146,7 +288,7 @@ export class MemoryBrowserComponent implements Component {
         this.refresh();
         return;
       }
-      if (data === "r") {
+      if (data === "r" && this.isOpenMarkdownFile()) {
         this.renderMarkdown = !this.renderMarkdown;
         this.invalidateRenderedFile();
         this.scroll = 0;
@@ -208,6 +350,8 @@ export class MemoryBrowserComponent implements Component {
     if (this.openFile) {
       const height = 24;
       const isMarkdownFile = /\.md(?:own)?$/i.test(this.openFile.relativePath);
+      const isHtmlFile = /\.html?$/i.test(this.openFile.relativePath);
+      const isLoadableTextFile = /\.(md|mdown|txt|html?)$/i.test(this.openFile.relativePath);
       const mode: "markdown" | "raw" = isMarkdownFile && this.renderMarkdown ? "markdown" : "raw";
       if (!this.renderedFileLines || this.renderedFileWidth !== inner || this.renderedFileMode !== mode) {
         this.renderedFileWidth = inner;
@@ -218,9 +362,10 @@ export class MemoryBrowserComponent implements Component {
       const maxScroll = Math.max(0, renderedLines.length - height);
       this.scroll = Math.min(this.scroll, maxScroll);
       const modeHint = isMarkdownFile ? `${mode} · ` : "raw · ";
-      const loadHint = isMarkdownFile ? " · l load context" : "";
+      const renderHint = isMarkdownFile ? " · r raw/markdown" : "";
+      const loadHint = isLoadableTextFile ? (isHtmlFile ? " · l load cleaned context" : " · l load context") : "";
       lines.push(row(`${this.theme.fg("accent", this.theme.bold(`memory/${this.openFile.relativePath}`))} ${this.theme.fg("muted", `${modeHint}${this.scroll + 1}/${Math.max(1, renderedLines.length)}`)}`));
-      lines.push(row(this.theme.fg("dim", `↑/k ↓/j scroll · PgUp/PgDn jump · r raw/markdown${loadHint} · Esc/b back`)));
+      lines.push(row(this.theme.fg("dim", `↑/k ↓/j scroll · PgUp/PgDn jump${renderHint}${loadHint} · Esc/b back`)));
       if (this.loadMessage) lines.push(row(this.theme.fg("success", `✓ ${this.loadMessage}`)));
       else lines.push(row());
       if (this.openError) {

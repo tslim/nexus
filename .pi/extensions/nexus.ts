@@ -103,7 +103,7 @@ function loadMemoryFileIntoContext(
   const displayPath = `memory/${file.relativePath}`;
   pi.sendMessage({
     customType: "nexus-memory-context",
-    content: `The following memory markdown file has been loaded into the current session context. Use it as reference for future responses in this session.\n\n<memory_file path="${displayPath}">\n${text}\n</memory_file>`,
+    content: `The following memory file has been loaded into the current session context. HTML files are loaded as cleaned Markdown/text by the memory browser. Use it as reference for future responses in this session.\n\n<memory_file path="${displayPath}">\n${text}\n</memory_file>`,
     display: false,
     details: {
       path: displayPath,
