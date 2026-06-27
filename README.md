@@ -1,6 +1,6 @@
 # Work Assistant 
 
-This repository provides a skill-driven work assistant for [Claude Code](https://claude.com/product/claude-code) / [Opencode](https://opencode.ai) / [Pi.dev](https://pi.dev) with:
+This repository provides a skill-driven personal and work assistant for [Claude Code](https://claude.com/product/claude-code) / [Opencode](https://opencode.ai) / [Pi.dev](https://pi.dev) with:
 
 - `TASKS.md` as the shared task board
 - `CLAUDE.md` as generated working memory (hot cache)
@@ -25,8 +25,8 @@ This repository provides a skill-driven work assistant for [Claude Code](https:/
 | `daily-sync` | Collects your 3 standup answers and posts them to the current team daily thread in Slack. |
 | `task-management` | Task conventions for `TASKS.md` (active, waiting, someday, done) and task update behavior. |
 | `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base, with explicit `ingest`, `query`, and `lint` workflows. |
-| `memory-backup` | Syncs `CLAUDE.md`, `TASKS.md`, and `memory/` with a separate private Git repo clone, including push, pull, and sync modes. |
 | `journal-sync` | Imports recent Notion Journal entries into monthly `memory/journals/month_YYYY-MM_text.txt` files with incremental sync tracking. |
+| `portfolio-update` | Fetches live prices for equities in `memory/projects/investment_portfolio.md`. |
 
 ### External source readers
 
@@ -95,6 +95,7 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 │       ├── task-management/
 │       ├── memory-management/
 │       ├── memory-backup/
+│       ├── portfolio-update/
 │       ├── journal-sync/
 │       ├── gmail/
 │       ├── google-calendar/
