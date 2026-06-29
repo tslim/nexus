@@ -1,6 +1,6 @@
 ---
 name: portfolio-update
-description: Fetches live prices for equities in `memory/projects/investment_portfolio.md`.
+description: Fetches live prices for equities and forex for investment portfolio.
 tools: [Bash]
 ---
 
