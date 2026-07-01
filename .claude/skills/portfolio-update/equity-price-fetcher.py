@@ -44,7 +44,7 @@ def fetch_ticker_price(ticker: str, period: str = "5d") -> dict:
         if not data.empty and "Close" in data.columns:
             # Use .values[-1] for robust scalar extraction across pandas versions
             close_series = data["Close"]
-            price = float(close_series.iloc[0].item()) if len(close_series) > 0 else None
+            price = float(close_series.iloc[-1].item()) if len(close_series) > 0 else None
             result["price"] = round(price, 4)
             # Try to extract currency from Yahoo Finance metadata
             try:
