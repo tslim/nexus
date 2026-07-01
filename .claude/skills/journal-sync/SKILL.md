@@ -19,11 +19,16 @@ python3 - <<'PY'
 from pathlib import Path
 p = Path('memory/journals/README.md')
 if not p.exists() or not _has_tracking(p.read_text()):
-    s = '# Journal Archive\n\nMonthly journal extracts exported from Notion for long-range personal and work context.\n\n## Sync Tracking\n\n> Update this section after each journal-sync. Latest journal date is the persistent high-water mark; lookback catches recently missed entries.\n\n- **Last sync**: never (first run)\n- **Entries fetched**: 0\n- **Entries added**: 0\n- **Lookback days**: 7\n- **Latest journal date**: null (created_time high-water mark)\n\n## Notes\n\n- Raw monthly files are source material and are intentionally not individually listed in `memory/index.md`.\n- Use yearly summaries first for overview, then inspect monthly extracts when exact chronology or wording matters.'
+    config = '\n## Configuration\n\n- **Data Source ID**: `cc42b6a6-bb69-481f-bab9-26b22e4b56bc`'
+    s = '# Journal Archive\n\nMonthly journal extracts exported from Notion for long-range personal and work context.' + config + '\n\n## Sync Tracking\n\n> Update this section after each journal-sync. Latest journal date is the persistent high-water mark; lookback catches recently missed entries.\n\n- **Last sync**: never (first run)\n- **Entries fetched**: 0\n- **Entries added**: 0\n- **Lookback days**: 7\n- **Latest journal date**: null (created_time high-water mark)\n\n## Notes\n\n- Raw monthly files are source material and are intentionally not individually listed in `memory/index.md`.\n- Use yearly summaries first for overview, then inspect monthly extracts when exact chronology or wording matters.'
     p.write_text(s)
 else:
     s = p.read_text()
     insert = '\n## Sync Tracking\n\n> Update this section after each journal-sync. Latest journal date is the persistent high-water mark; lookback catches recently missed entries.\n\n- **Last sync**: never (first run)\n- **Entries fetched**: 0\n- **Entries added**: 0\n- **Lookback days**: 7\n- **Latest journal date**: null (created_time high-water mark)\n'
+    # Add Configuration section if missing.
+    if 'Data Source ID' not in s:
+        config = '\n## Configuration\n\n- **Data Source ID**: `cc42b6a6-bb69-481f-bab9-26b22e4b56bc`'
+        s = s.replace('\n## Sync Tracking', config + '\n## Sync Tracking', 1) if '\n## Sync Tracking' in s else s + config
     p.write_text(s.replace('\n## Notes', insert + '\n## Notes', 1) if '\n## Notes' in s else s + insert)
 
 def _has_tracking(text):

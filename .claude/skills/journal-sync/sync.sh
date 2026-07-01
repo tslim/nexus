@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA_SOURCE_ID="cc42b6a6-bb69-481f-bab9-26b22e4b56bc"
 README="memory/journals/README.md"
+
+# Read config from README.
+DATA_SOURCE_ID=$(sed -n 's/.*Data Source ID[^`]*`\([^`]*\).*/\1/p' "$README")
+if [ -z "$DATA_SOURCE_ID" ]; then
+  echo "ERROR: DATA_SOURCE_ID not found in $README under Configuration section." >&2
+  exit 1
+fi
 LOOKBACK_DAYS="${JOURNAL_SYNC_LOOKBACK_DAYS:-7}"
 mkdir -p memory/journals
 
