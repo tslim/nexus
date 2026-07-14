@@ -20,6 +20,11 @@ Hard rules:
 - Do not run `memory-backup`.
 - Do not send Slack/email/Notion messages or mutate external systems.
 - Use read/search/list commands and relevant skill instructions only.
+- External source access in this project is CLI-based, not MCP-based:
+  - Slack: `node .claude/skills/slack/slack-cli.js ...`
+  - Gmail and Google Calendar: `gog ...`
+- Do not infer that Slack, Gmail, or Calendar are unavailable from an empty MCP registry. Load their skills and try the documented CLI commands first.
+- If a CLI source fails, report the exact command and error; do not silently replace it with local-memory findings.
 
 Before scanning:
 1. Understand the requested workflow, source, and scope from the prompt.
