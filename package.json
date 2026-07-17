@@ -1,9 +1,13 @@
 {
   "scripts": {
-    "ntn": "set -a; . ./.env; set +a; ntn"
+    "ntn": "set -a; . ./.env; set +a; ntn",
+    "zep": "node .claude/skills/time-log/zep-cli.js"
   },
   "dependencies": {
     "@slack/web-api": "^7.15.0",
     "ntn": "^0.14.1"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
   }
 }

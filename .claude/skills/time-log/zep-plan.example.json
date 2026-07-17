@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "date": "2099-01-01",
+  "timezone": "Asia/Kuching",
+  "expectedMinutes": 60,
+  "entries": [
+    {
+      "start": "09:30",
+      "end": "10:30",
+      "project": "Example Project",
+      "task": "Example Task",
+      "activity": "NA",
+      "remark": "Example calendar event",
+      "color": "#FFD173",
+      "billable": false
+    }
+  ]
+}
