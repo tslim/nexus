@@ -37,10 +37,17 @@ function colorToHex(value) {
   return `#${rgb.slice(1, 4).map((part) => Number(part).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
 }
 
-function zepDate(date) {
+function zepDate(date, language = "de") {
   const [year, month, day] = date.split("-").map(Number);
-  const weekday = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+  const weekdays = language === "en"
+    ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+    : ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const weekday = weekdays[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
   return `${weekday}, ${String(day).padStart(2, "0")}.${String(month).padStart(2, "0")}.${year}`;
+}
+
+function zepDateVariants(date) {
+  return [zepDate(date, "de"), zepDate(date, "en")];
 }
 
 function timeDuration(start, end) {
@@ -308,20 +315,18 @@ class ZepPage {
       activity: normalize(await selectedLabel("#taetigkeit")),
       remark: await this.page.locator("#bemerkung").inputValue(),
       color: colorToHex(await this.page.locator('input[name="color"]:checked').getAttribute("value")),
-      billable: await this.page.locator("#fakturierbar").isChecked(),
     };
-    const expectedDate = zepDate(date);
+    const expectedDates = zepDateVariants(date);
     const matchesTime = (actualTime, expectedTime) => actualTime === expectedTime || actualTime === `${expectedTime}:00`;
-    if (actual.date !== expectedDate
+    if (!expectedDates.includes(actual.date)
       || !matchesTime(actual.start, entry.start)
       || !matchesTime(actual.end, entry.end)
       || !matchesChoice(actual.project, entry.project)
       || !matchesChoice(actual.task, entry.task)
       || !matchesChoice(actual.activity, entry.activity)
       || actual.remark !== entry.remark
-      || actual.color !== colorToHex(entry.color)
-      || actual.billable !== entry.billable) {
-      throw new Error(`ZEP form verification failed before save. Expected ${JSON.stringify({ ...entry, date: expectedDate })}; found ${JSON.stringify(actual)}`);
+      || actual.color !== colorToHex(entry.color)) {
+      throw new Error(`ZEP form verification failed before save. Expected ${JSON.stringify({ ...entry, dates: expectedDates })}; found ${JSON.stringify(actual)}`);
     }
   }
 
@@ -349,9 +354,6 @@ class ZepPage {
       `color ${color}`,
     );
     await colorControl.check();
-    const billable = this.page.locator("#fakturierbar");
-    if (entry.billable) await billable.check();
-    else await billable.uncheck();
     await this.page.locator("#bemerkung").fill("");
     await this.page.locator("#bemerkung").fill(entry.remark);
 

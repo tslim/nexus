@@ -88,7 +88,6 @@ function normalizedEntry(entry) {
     activity: normalize(entry.activity),
     remark: normalize(entry.remark),
     color: normalize(entry.color).toUpperCase(),
-    billable: entry.billable === true,
   };
 }
 
@@ -166,7 +165,7 @@ function reconcile(planEntries, existingEntries) {
 }
 
 function printEntry(entry, prefix = "-") {
-  console.log(`${prefix} ${entry.start}–${entry.end} | ${entry.project} | ${entry.task} | ${entry.activity} | ${entry.remark} | ${entry.color} | billable=${entry.billable}`);
+  console.log(`${prefix} ${entry.start}–${entry.end} | ${entry.project} | ${entry.task} | ${entry.activity} | ${entry.remark} | ${entry.color}`);
 }
 
 function printReconciliation(plan, hash, existing, result) {
