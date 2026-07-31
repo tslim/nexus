@@ -79,11 +79,15 @@ function normalizeTask(value) {
   return repeated && normalize(repeated[1]) === normalize(repeated[2]) ? normalize(repeated[1]) : task;
 }
 
+function normalizeProject(value) {
+  return normalize(value).replace(/\s+\(\d+\)$/, "");
+}
+
 function normalizedEntry(entry) {
   return {
     start: normalize(entry.start),
     end: normalize(entry.end),
-    project: normalize(entry.project),
+    project: normalizeProject(entry.project),
     task: normalizeTask(entry.task),
     activity: normalize(entry.activity),
     remark: normalize(entry.remark),
