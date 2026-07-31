@@ -18,12 +18,14 @@ import { readLatestBackup, runMemoryBackup } from "./lib/backup";
 import { warmCalendarDays } from "./lib/calendar";
 import {
   STANDARD_OVERLAY_OPTIONS,
+  STATUS_OVERLAY_OPTIONS,
   CALENDAR_OVERLAY_OPTIONS,
 } from "./lib/ui/overlay";
 import { TasksModalComponent } from "./lib/ui/tasks-modal";
 import { CalendarPanelComponent } from "./lib/ui/calendar-panel";
 import { MemoryBrowserComponent } from "./lib/ui/memory-browser";
 import { LogBrowserComponent } from "./lib/ui/log-browser";
+import { StatusModalComponent } from "./lib/ui/status-modal";
 
 const WIDGET_ID = "nexus";
 
@@ -94,6 +96,41 @@ async function openCalendarOverlay(ctx: ExtensionContext) {
   );
 }
 
+async function openStatusModal(pi: ExtensionAPI, ctx: ExtensionContext) {
+  if (!ctx.hasUI) return;
+
+  const tasks = readTaskItems(ctx.cwd);
+  const latestLog = readLatestMemoryLog(ctx.cwd);
+  const backup = readLatestBackup(ctx.cwd);
+  const usage = ctx.getContextUsage();
+  const formatTokens = (tokens: number) => new Intl.NumberFormat("en-US").format(tokens);
+  const context = usage
+    ? `${usage.tokens === null ? "unknown" : formatTokens(usage.tokens)} / ${formatTokens(usage.contextWindow)} tokens${usage.percent === null ? "" : ` (${usage.percent.toFixed(1)}%)`}`
+    : "Unavailable";
+
+  await ctx.ui.custom<void>(
+    (_tui, theme, _keybindings, done) =>
+      new StatusModalComponent(
+        theme,
+        {
+          workspace: ctx.cwd,
+          session: pi.getSessionName() ?? ctx.sessionManager.getSessionId(),
+          model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "No active model",
+          thinking: pi.getThinkingLevel(),
+          context,
+          tasks: tasks.error ? tasks.error : `${tasks.activeCount} active · ${tasks.totalCount} total`,
+          latestLog: latestLog ? `${latestLog.timestamp} — ${latestLog.description}` : "No memory log entries",
+          backup: backup ?? "Unavailable",
+        },
+        done,
+      ),
+    {
+      overlay: true,
+      overlayOptions: STATUS_OVERLAY_OPTIONS,
+    },
+  );
+}
+
 function loadMemoryFileIntoContext(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
@@ -158,6 +195,13 @@ export default function (pi: ExtensionAPI) {
     description: "Show TASKS.md active tasks modal",
     handler: async (_args, ctx) => {
       await openTasksModal(ctx);
+    },
+  });
+
+  pi.registerCommand("status", {
+    description: "Show Nexus and session status",
+    handler: async (_args, ctx) => {
+      await openStatusModal(pi, ctx);
     },
   });
 
