@@ -5,16 +5,13 @@ description: Setup productivity system for work
 
 # Work Start
 
-Initialize tasks, memory, and the dashboard.
+Initialize tasks and memory. Use the `/tasks` extension as the task interface.
 
 Load `memory-management` and `task-management` before continuing. Follow the architecture, conventions, and reference templates defined by `memory-management` when bootstrapping or repairing the memory system.
 
 ## Setup Flow
 
-If `dashboard.html` is missing, copy it from `./skills/dashboard.html`.
-
-Do not use `open` or `xdg-open`. Tell the user:
-- `Dashboard is ready at dashboard.html. Open it from your file browser to get started.`
+Use `TASKS.md` as the task source of truth. Direct the user to `/tasks` for the interactive task interface.
 
 ## Initialization Paths
 
@@ -45,7 +42,8 @@ Check whether the system is already initialized, partially initialized, or empty
 If initialized, stop after orientation:
 
 ```text
-Dashboard open. Your tasks and memory are both loaded.
+Your tasks and memory are both loaded.
+- /tasks to manage tasks
 - /work-update to sync tasks and refresh memory
 ```
 
@@ -166,9 +164,9 @@ Productivity system ready:
 - Memory hot cache: CLAUDE.md
 - Wiki core: memory/SCHEMA.md, memory/index.md, memory/log.md
 - Seeded context: X people, X terms, X projects
-- Dashboard: open in browser
+- Task interface: `/tasks`
 
-Use /work-update to keep things current.
+Use `/tasks` to manage tasks and `/work-update` to keep context current.
 ```
 
 ## Notes

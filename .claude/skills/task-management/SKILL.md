@@ -24,14 +24,6 @@ Tasks live in `TASKS.md` in the current working directory.
 ## Done
 ```
 
-## Dashboard
-
-On first task interaction:
-
-1. Check for `dashboard.html`
-2. If missing, copy it from `./skills/dashboard.html`
-3. Tell the user: `I've added the dashboard. Run /work-start to set up the full system.`
-
 ## Task Format
 
 - Task: `- [ ] **Task title** - [Project X](memory/projects/project-x.md), follow up with [John Doe](memory/people/john-doe.md) _(added YYYY-MM-DD)_`
