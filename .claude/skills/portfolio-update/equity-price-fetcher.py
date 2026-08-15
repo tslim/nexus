@@ -24,6 +24,8 @@ except ImportError:
     print("ERROR: yfinance not installed. Run: pip3 install yfinance", file=sys.stderr)
     sys.exit(1)
 
+import pandas as pd
+
 
 # ─── Core Fetch Functions ────────────────────────────────────────
 
@@ -40,12 +42,22 @@ def fetch_ticker_price(ticker: str, period: str = "5d") -> dict:
     result = {"symbol": ticker, "price": None, "currency": None, "error": None}
 
     try:
-        data = yf.download(ticker, period=period)
-        if not data.empty and "Close" in data.columns:
-            # Use .values[-1] for robust scalar extraction across pandas versions
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            data = yf.download(ticker, period=period, progress=False)
+        # Handle both regular and MultiIndex columns from Yahoo Finance
+        if isinstance(data.columns, pd.MultiIndex):
+            close_series = data.iloc[:, 0]  # First column is Close
+        elif "Close" in data.columns:
             close_series = data["Close"]
-            price = float(close_series.iloc[-1].item()) if len(close_series) > 0 else None
-            result["price"] = round(price, 4)
+        else:
+            raise ValueError("No Close column")
+        
+        if not data.empty and len(close_series) > 0:
+            # Filter out NaN/NaT values (e.g., weekend holidays), then take last valid
+            valid_prices = list(close_series[~pd.isna(close_series)])
+            result["price"] = round(float(valid_prices[-1]), 4) if len(valid_prices) > 0 else None
             # Try to extract currency from Yahoo Finance metadata
             try:
                 info = yf.Ticker(ticker).info
