@@ -76,27 +76,7 @@ This repo also defines project-only subagents for the [`@tintinweb/pi-subagents`
 | `task-reconciler` | Compares task candidates against `TASKS.md` and returns triage recommendations: already tracked, new candidate, stale, completion signal, waiting-on change, duplicate, or unclear. | No |
 | `memory-curator` | Classifies candidate memory updates against `CLAUDE.md` and `memory/`, recommending safe existing-page updates, glossary/hot-cache candidates, new-page confirmations, or ignored transient noise. | No |
 
-### `/scan` prompt template
-
-This repo includes a project-local Pi prompt template:
-
-```text
-/scan
-```
-
-It schedules routine `activity-scanner` runs at 9am, 12pm, and 3pm, plus a final run at 6pm, Monday-Friday in the current Pi session. Each read-only run scans Slack, Gmail, Calendar, `TASKS.md`, and relevant memory for blockers, commitments, missing tasks, completion signals, and durable memory candidates.
-
-A practical setup is to keep `/scan` running in a dedicated Pi tab throughout the workday. When the 6pm scan completes, its completion notification starts the interactive `work-update` workflow in the parent session. The transition is completion-driven rather than delayed by a fixed number of minutes, so `work-update` cannot race the final scan.
-
-`work-update` reuses the day's visible scanner results, deduplicates repeated findings, and runs catch-up scans only for missing or stale sources before proposing task or memory changes. Its normal confirmation rules still apply: the automatic start does not authorize task or memory edits.
-
-Scheduled runs are session-scoped: they only fire while that Pi session is active or resumed, and missed runs are not replayed. Keep the monitoring tab available during the scheduled times so the end-of-day update has the day's scanner results in context.
-
-Design rules:
-- Subagents collect and classify only; the parent workflow remains responsible for user confirmation and file edits.
-- `work-update` may spawn or reuse `activity-scanner` agents, then use `task-reconciler` and `memory-curator` before applying confirmed task/memory changes.
-- `meeting-notes` may use `task-reconciler` and `memory-curator` to classify extracted action items and durable updates before asking for confirmation.
-- `daily-sync` may use `activity-scanner` only to draft suggested standup answers; the parent agent still asks the 3 required questions and posts the confirmed Slack reply.
+**Typical workflow:** Run `/scan` in a dedicated Pi tab to schedule read-only activity scans at 9am, 12pm, 3pm, and 6pm on weekdays. After the final scan completes, the same tab starts the interactive `work-update` workflow using the day's findings. Scheduled scans only run while that session is active or resumed, missed runs are not replayed, and task or protected-memory changes still require confirmation.
 
 If you add or rename agents, restart Pi or start a new session so the `Agent` tool schema and `/agents` menu refresh.
 
@@ -164,7 +144,7 @@ When using Pi:
 
 - Use `/tasks`, `/memory`, `/calendar`, `/logs`, and `/status` for the interactive workspace interface.
 - Optionally install `@tintinweb/pi-subagents` to enable the project-local agents in `.pi/agents/`.
-- Optionally keep `/scan` in a dedicated monitoring tab during work hours; after the 6pm scan completes, it automatically starts the interactive `/work-update` workflow in that tab.
+- Optionally run `/scan` in a dedicated Pi tab for workday monitoring and an automatic interactive end-of-day update.
 
 Other optional workflows:
 
