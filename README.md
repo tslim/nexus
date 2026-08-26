@@ -1,11 +1,11 @@
-# Personal & Work AI Assistant 
+# Nexus — Personal & Work AI Assistant
 
-This repository provides a skill-driven personal and work AI assistant for [Claude Code](https://claude.com/product/claude-code) / [Opencode](https://opencode.ai) / [Pi.dev](https://pi.dev) with:
+Nexus is a local, skill-driven personal and work AI assistant for [Pi](https://pi.dev), [Claude Code](https://claude.com/product/claude-code), and [OpenCode](https://opencode.ai). It combines:
 
 - `TASKS.md` as the shared task board
 - `CLAUDE.md` as generated working memory (hot cache)
 - `memory/` as long-term structured memory
-- `dashboard.html` as a visual UI for tasks + memory
+- an interactive Pi interface for tasks, memory, calendar, logs, and status
 
 ## How It Works
 
@@ -20,11 +20,14 @@ This repository provides a skill-driven personal and work AI assistant for [Clau
 
 | Skill | Purpose |
 |---|---|
-| `work-start` | First-run initializer: checks/creates `TASKS.md`, ensures dashboard setup, and bootstraps memory (`CLAUDE.md` + `memory/`). |
+| `work-start` | First-run initializer: checks/creates `TASKS.md` and bootstraps memory (`CLAUDE.md` + `memory/`). |
 | `work-update` | Main ongoing sync flow for tasks + memory gaps, stale task triage, and context enrichment. Uses memory query for lookup/decoding and memory ingest for durable filing. |
 | `daily-sync` | Collects your 3 standup answers and posts them to the current team daily thread in Slack. |
+| `meeting-notes` | Extracts decisions, action items, task candidates, and durable memory updates from pasted meeting notes, with confirmation before edits. |
 | `task-management` | Task conventions for `TASKS.md` (active, waiting, someday, done) and task update behavior. |
 | `memory-management` | Two-tier memory system: compact `CLAUDE.md` hot cache + detailed `memory/` knowledge base, with explicit `ingest`, `query`, and `lint` workflows. |
+| `memory-backup` | Syncs `CLAUDE.md`, `TASKS.md`, and `memory/` with a separate private Git repository. |
+| `time-log` | Builds today's mapped ZEP time-log plan from Google Calendar and enters it only after guarded preview and explicit approval. |
 | `decision-matrix` | Multi-criteria decision analysis with weighted scoring — builds comparison tables from ruminate.io templates or manual input. |
 | `journal-sync` | Pulls recent Notion Journal entries into monthly files, grouped by year. |
 | `portfolio-update` | Fetches live prices for equities in `memory/projects/investment_portfolio.md`. |
@@ -40,6 +43,13 @@ This repository provides a skill-driven personal and work AI assistant for [Clau
 | `notion` | Reads, searches, and updates Notion pages, data sources/databases, Markdown, files, and Workers via the official `ntn` CLI. |
 | `notebooklm` | Manages NotebookLM notebooks, sources, chats, and generated artifacts via `notebooklm-py`. |
 
+### Research and web
+
+| Skill | Purpose |
+|---|---|
+| `ketch` | Searches, scrapes, and crawls the web, public code, and curated documentation for cited research. |
+| `ddgr` | Runs lightweight DuckDuckGo web and bang searches from the command line. |
+
 ## Pi Agent Extensions
 
 This repository includes custom UI extensions for [pi](https://pi.dev), the coding agent framework.
@@ -49,9 +59,12 @@ The Pi extension provides a continuous status bar widget and several interactive
 | Command | Purpose |
 |---|---|
 | `/tasks` | Interactive TUI modal to view `TASKS.md` categories, page through tasks, and mark open tasks as done (uses `Space` or `Enter`). |
-| `/memory` | Fuzzy file browser for the `memory/` directory. Provides a scrollable file preview with markdown rendering (`r` to toggle raw source) and fast keyboard navigation. |
+| `/memory` | Fuzzy file browser for the `memory/` directory. Provides a scrollable file preview with markdown rendering (`r` to toggle raw source), fast keyboard navigation, and an action to load a selected file into the current session context. |
 | `/calendar` | Overlay showing upcoming Google Calendar events via `gog`. |
 | `/logs` | Interactive modal to page through `memory/log.md` entries (Older/Newer), keeping you aware of recent context changes. |
+| `/status` | Shows the Nexus workspace, session, model, context usage, task count, latest memory log entry, and backup status. |
+
+Press `Ctrl+Shift+T` to open the tasks modal. When a task is marked done, the extension updates `TASKS.md` and runs the configured memory backup. Project extensions under `.pi/extensions/` are loaded by Pi for this workspace; restart Pi or start a new session after changing extension code.
 
 ## Project-local Pi Subagents
 
@@ -71,9 +84,13 @@ This repo includes a project-local Pi prompt template:
 /scan
 ```
 
-It schedules `activity-scanner` to run at 9am, 12pm, 3pm, and 6pm Monday-Friday in the current Pi session using cron expression `0 0 9,12,15,18 * * 1-5`. Each run scans Slack, Gmail, Calendar, `TASKS.md`, and relevant memory for recent work-update signals, returning concise high-confidence findings with scanner metadata.
+It schedules routine `activity-scanner` runs at 9am, 12pm, and 3pm, plus a final run at 6pm, Monday-Friday in the current Pi session. Each read-only run scans Slack, Gmail, Calendar, `TASKS.md`, and relevant memory for blockers, commitments, missing tasks, completion signals, and durable memory candidates.
 
-Use `/scan` in the Pi session you want to treat as your work-monitoring session. Scheduled runs are session-scoped, only fire while that session is active/resumed, and do not replay missed runs. Later, `/work-update` can reuse visible scanner outputs based on their run time and sources scanned, then perform catch-up scans only for missing or stale sources.
+A practical setup is to keep `/scan` running in a dedicated Pi tab throughout the workday. When the 6pm scan completes, its completion notification starts the interactive `work-update` workflow in the parent session. The transition is completion-driven rather than delayed by a fixed number of minutes, so `work-update` cannot race the final scan.
+
+`work-update` reuses the day's visible scanner results, deduplicates repeated findings, and runs catch-up scans only for missing or stale sources before proposing task or memory changes. Its normal confirmation rules still apply: the automatic start does not authorize task or memory edits.
+
+Scheduled runs are session-scoped: they only fire while that Pi session is active or resumed, and missed runs are not replayed. Keep the monitoring tab available during the scheduled times so the end-of-day update has the day's scanner results in context.
 
 Design rules:
 - Subagents collect and classify only; the parent workflow remains responsible for user confirmation and file edits.
@@ -89,16 +106,19 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 .
 ├── .claude/
 │   └── skills/
-│       ├── dashboard.html
 │       ├── work-start/
 │       ├── work-update/
 │       ├── daily-sync/
+│       ├── meeting-notes/
 │       ├── task-management/
 │       ├── memory-management/
 │       ├── decision-matrix/
 │       ├── memory-backup/
+│       ├── time-log/
 │       ├── portfolio-update/
 │       ├── journal-sync/
+│       ├── ketch/
+│       ├── ddgr/
 │       ├── gmail/
 │       ├── google-calendar/
 │       ├── google-drive/
@@ -117,10 +137,10 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 ├── TASKS.md         # generated/maintained by workflow
 ├── CLAUDE.md        # generated hot-memory file
 ├── package.json     # Node dependencies for local skill tooling
-├── dashboard.html   # copied to root for browser use
 └── memory/
     ├── glossary.md
-    ├── journals/index.md
+    ├── journals/
+    │   ├── index.md
     │   └── YYYY/          ← monthly entries + yearly summary per folder
     ├── people/
     ├── projects/
@@ -130,33 +150,60 @@ If you add or rename agents, restart Pi or start a new session so the `Agent` to
 
 ## Quick Start
 
-1. Install dependencies with `npm install`, then configure authentication.
-2. Run `/work-start`.
-3. Open `dashboard.html` from your file browser.
-4. Use `/work-update` regularly to keep tasks and memory fresh.
-5. Use `/daily-sync` to post your standup update to the right Slack thread.
-6. Optional for Pi: install `@tintinweb/pi-subagents` to enable the project-local agents in `.pi/agents/`.
-7. Optional for Pi: run `/scan` in your work-monitoring session to schedule read-only activity scans during work hours.
-8. Optional: configure `MEMORY_BACKUP_DIR` if you want to use `/memory-backup`.
-9. Optional: configure Notion and run `/journal-sync` to import recent Journal entries into memory.
+1. Install the core dependencies:
+   ```bash
+   npm install
+   uv sync
+   ```
+2. Open the repository in Pi, Claude Code, or OpenCode.
+3. Run `/work-start` to initialize `TASKS.md`, `CLAUDE.md`, and `memory/`.
+4. Use `/work-update` regularly to keep tasks and memory current.
+5. Configure only the external integrations you need.
+
+When using Pi:
+
+- Use `/tasks`, `/memory`, `/calendar`, `/logs`, and `/status` for the interactive workspace interface.
+- Optionally install `@tintinweb/pi-subagents` to enable the project-local agents in `.pi/agents/`.
+- Optionally keep `/scan` in a dedicated monitoring tab during work hours; after the 6pm scan completes, it automatically starts the interactive `/work-update` workflow in that tab.
+
+Other optional workflows:
+
+- Use `/daily-sync` to post your standup update to the correct Slack thread.
+- Configure `MEMORY_BACKUP_DIR` to use `/memory-backup`.
+- Configure Notion and run `/journal-sync` to import recent Journal entries into memory.
 
 ## Prerequisites
 
-- Claude Code / Opencode
-- `node`
-- `python3`
-- Node dependencies:
+- Pi, Claude Code, or OpenCode
+- Node.js and npm
+- Python 3.12 or later
+- [`uv`](https://docs.astral.sh/uv/)
+- Core dependencies:
   - `npm install`
+  - `uv sync`
 - `gog` CLI:
   - `brew install gogcli`
 - `ntn` CLI for Notion:
   - `npm install --global ntn`
   - or use the local helper: `npm run --silent ntn -- ...`
-- `notebooklm` CLI:
-  - `uv venv`
-  - `uv pip install --python .venv/bin/python "notebooklm-py[browser]"`
+- Chromium for NotebookLM browser authentication:
   - `uv run playwright install chromium`
-  - `source .venv/bin/activate`
+
+The external-service CLIs and Chromium installation are needed only for the integrations that use them.
+
+## Environment variables
+
+Create a `.env` file in the repository root for the integrations you use:
+
+| Variable | Used by |
+|---|---|
+| `SLACK_TOKEN` | Slack |
+| `NOTION_API_TOKEN` | Notion |
+| `NOTION_WORKSPACE_ID` | Optional Notion workspace targeting |
+| `GOG_ACCOUNT` | Optional default Google account |
+| `MEMORY_BACKUP_DIR` | Memory backup |
+
+Do not commit `.env`.
 
 ## Authentication Setup
 
@@ -207,19 +254,17 @@ Use `/notion` for general Notion operations. Use `/journal-sync` to import the c
 
 ### NotebookLM (via notebooklm-py)
 
-1. Install the CLI:
-   - `uv venv`
-   - `uv pip install --python .venv/bin/python "notebooklm-py[browser]"`
+1. Install the locked Python dependencies and Chromium:
+   - `uv sync`
    - `uv run playwright install chromium`
-   - `source .venv/bin/activate`
 2. Authenticate with Google:
-   - `notebooklm login`
+   - `uv run notebooklm login`
 3. Verify the setup:
-   - `notebooklm status`
-   - `notebooklm list --json`
+   - `uv run notebooklm status`
+   - `uv run notebooklm list --json`
 4. If auth expires or verification fails:
-   - `notebooklm auth check`
-   - `notebooklm login`
+   - `uv run notebooklm auth check`
+   - `uv run notebooklm login`
 
 For parallel workflows, prefer explicit notebook IDs (`-n <id>` or `--notebook <id>`) instead of relying on `notebooklm use`.
 
@@ -238,6 +283,14 @@ For parallel workflows, prefer explicit notebook IDs (`-n <id>` or `--notebook <
 `MEMORY_BACKUP_DIR` must point to a clean local clone of a separate private Git repo.
 
 For two-computer use, run `/memory-backup --pull` or `/memory-backup --sync` when starting work, and `/memory-backup` after memory/task changes. Pull/sync refuse to overwrite local changes in `CLAUDE.md`, `TASKS.md`, or `memory/`.
+
+## Privacy and local data
+
+- `memory/`, `TASKS.md`, `CLAUDE.md`, and `.env` contain local or potentially sensitive information and are intentionally excluded from Git.
+- Never commit OAuth credentials, API tokens, cookies, or browser authentication state.
+- Use a private repository for memory backups.
+- External-reader skills can send selected email, calendar, Slack, Notion, or Drive content to the active AI provider as working context. Review your provider and workspace policies before using them with sensitive data.
+- Review `.claude/settings.json` and the project-local Pi configuration before enabling integrations or granting additional permissions.
 
 ## Operating Notes
 
