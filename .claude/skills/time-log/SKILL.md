@@ -14,7 +14,7 @@ Build the current workday's mapped table and, when explicitly requested, reconci
 - Use the local Playwright CLI in this skill only for ZEP.
 - Load and follow the `memory-management` skill before mapping.
 - Read `memory/context/zep-time-mappings.md` as the canonical mapping source.
-- Do not update mapping memory during this workflow.
+- Do not update mapping memory during this workflow unless the user explicitly asks to retain a mapping or workflow rule.
 - Calendar mapping, ZEP inspection, and ZEP preview are read-only.
 - Never run the ZEP `apply` command unless the user explicitly approves the complete plan and its SHA-256 hash.
 - Never edit or delete an existing ZEP entry automatically.
@@ -45,8 +45,6 @@ Ignore declined or cancelled events. Always skip and list the reason for:
 - All-day events.
 - Working-location events.
 - Zero-duration or cross-midnight events unless the user supplies exact times.
-
-Do not skip Daily sync events or events in the AI Agents workstream; process them as normal Calendar events and apply the usual mapping and uncertainty rules.
 
 Do not modify Calendar.
 
