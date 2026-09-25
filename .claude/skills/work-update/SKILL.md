@@ -83,14 +83,21 @@ Use subagents this way:
 5. Pass the aggregated task-like findings to `task-reconciler` before asking the user to confirm task edits.
 6. Pass the aggregated memory-like findings to `memory-curator` before applying safe memory updates or asking for confirmation.
 
-#### Reusing Hourly Scheduled Scanner Results
+#### Reusing Scheduled Scanner Results
 
-If `activity-scanner` runs hourly and the user runs `work-update` at end of day, do not treat older same-day scanner outputs as stale merely because they are more than a few hours old. Instead:
-- Reuse all visible completed scanner outputs from the current workday, or since the last known `work-update`, when their metadata shows relevant sources scanned.
-- Deduplicate repeated findings across hourly runs.
+Scheduled completion notifications contain a short preview, often only the first 500 characters. A truncated notification is not the full scanner output.
+
+When `activity-scanner` runs during the day and the user runs `work-update` at end of day:
+- Find same-day `activity-scanner` completion notifications in the current parent conversation.
+- For each notification, extract its `<task-id>` and call `get_subagent_result` if the full output is not already present as a tool result.
+- Reuse all retrieved scanner outputs from the current workday, or since the last known `work-update`, when their metadata shows relevant sources scanned.
+- Deduplicate repeated findings across runs.
 - Identify gaps by source.
-- Run a small catch-up scan only for sources not covered by scheduled scans or when recent scanner outputs are missing/stale.
+- Run a small catch-up scan only for sources not covered by scheduled scans, failed retrievals, or missing/stale results.
+- Never claim that a preview marked `...(truncated, use get_subagent_result for full output)` was fully reused.
 - If scanner outputs are not visible in the current conversation and no agent IDs are available to retrieve, fall back to normal scanning.
+
+Scheduled jobs are session-scoped. A different Pi session cannot reuse their conversation results unless the findings were persisted elsewhere. In that case, run a catch-up scan instead of assuming that the other session's results are available.
 
 When reusing scanner outputs, mention it in the final report, for example:
 
