@@ -16,11 +16,23 @@ mkdir -p memory/journals
 LATEST_DATE=$(perl -ne 'print $1 if /^- \*\*Latest journal date\*\*: ([^ ]+)/' "$INDEX")
 SINCE_DATE=""
 if [ -n "$LATEST_DATE" ] && [ "$LATEST_DATE" != "null" ]; then
+  # Validate ISO format; skip if invalid (triggers full fetch on next sync)
+  VALID=$(python3 -c "from datetime import datetime; datetime.fromisoformat('$LATEST_DATE'.replace('Z','+00:00')); print('yes')" 2>/dev/null || echo "no")
+  if [ "$VALID" != "yes" ]; then
+    echo "WARNING: Corrupted high-water mark '$LATEST_DATE' in index; resetting to null." >&2
+    LATEST_DATE=""
+  fi
+fi
+if [ -n "$LATEST_DATE" ] && [ "$LATEST_DATE" != "null" ]; then
   SINCE_DATE=$(python3 - "$LATEST_DATE" "$LOOKBACK_DAYS" <<'PY'
 from datetime import datetime, timedelta, timezone
 import sys
 raw, days = sys.argv[1], int(sys.argv[2])
-dt = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+# Handle both date-only (YYYY-MM-DD) and full ISO strings.
+if 'T' not in raw:
+    dt = datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+else:
+    dt = datetime.fromisoformat(raw.replace('Z', '+00:00'))
 if dt.tzinfo is None:
     dt = dt.replace(tzinfo=timezone.utc)
 dt = (dt - timedelta(days=days)).astimezone(timezone.utc)
@@ -116,7 +128,8 @@ done
 ENTRY_COUNT=$(jq 'length' /tmp/sorted_entries.json)
 ADDED_COUNT=$(grep -c '^WRITTEN:' /tmp/journal_sync_written.log 2>/dev/null || true)
 SYNC_DATE=$(date '+%Y-%m-%d %H:%M:%S %z')
-FETCHED_LATEST=$(jq -r 'map(.date) | max // empty' /tmp/sorted_entries.json)
+# Extract just the date portion (YYYY-MM-DD) from created_time for reliable storage.
+FETCHED_LATEST=$(jq -r 'map(.date) | map(split("T")[0]) | max // empty' /tmp/sorted_entries.json)
 NEW_LATEST="${LATEST_DATE:-null}"
 if [ "$ENTRY_COUNT" -gt 0 ] && [ -n "$FETCHED_LATEST" ] && [ ! -s /tmp/sync_warnings.log ]; then
   NEW_LATEST="$FETCHED_LATEST"
