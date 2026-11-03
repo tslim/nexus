@@ -9,8 +9,8 @@ Usage:
     python3 equity-price-fetcher.py --forex=GBP/USD          # fetch GBP/USD
 
 Examples:
-    python3 equity-price-fetcher.py VTI --period 5d
-    python3 equity-price-fetcher.py "VTI|VOO|QQQ"            # batch fetch all at once
+    python3 equity-price-fetcher.py AAPL --period 5d
+    python3 equity-price-fetcher.py "AAPL|MSFT|SPY"           # batch fetch all at once
     python3 equity-price-fetcher.py --forex                   # get MYR/USD rate
 
 The skill handles table parsing, portfolio updates, and dry-run previews — this script only fetches.
@@ -25,54 +25,122 @@ except ImportError:
     sys.exit(1)
 
 import pandas as pd
+from datetime import date, datetime, timedelta, timezone
+
+
+# ─── Helpers ─────────────────────────────────────────────────────
+
+def _warn(msg: str) -> None:
+    print(f"WARNING: {msg}", file=sys.stderr)
+
+
+def _last_trading_day(today: "date | None" = None) -> "date":
+    """Most recent weekday on or before today (UTC). Ignores exchange holidays."""
+    d = today or datetime.now(timezone.utc).date()
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def _live_quote(t) -> tuple[float | None, "datetime | None"]:
+    """Latest regular-market price and its timestamp, or (None, None)."""
+    try:
+        info = t.info or {}
+        price = info.get("regularMarketPrice")
+        if price is not None and not pd.isna(price) and float(price) > 0:
+            ts = info.get("regularMarketTime")
+            when = datetime.fromtimestamp(int(ts), timezone.utc) if ts else None
+            return float(price), when
+    except Exception:
+        pass
+    try:
+        price = t.fast_info.last_price
+        if price is not None and not pd.isna(price) and float(price) > 0:
+            return float(price), None
+    except Exception:
+        pass
+    return None, None
+
+
+def _close_series(data: "pd.DataFrame") -> "pd.Series":
+    """Select the Close column by name (works for flat and MultiIndex columns)."""
+    if isinstance(data.columns, pd.MultiIndex):
+        for level in range(data.columns.nlevels):
+            if "Close" in data.columns.get_level_values(level):
+                close = data.xs("Close", axis=1, level=level)
+                return close.iloc[:, 0] if isinstance(close, pd.DataFrame) else close
+        raise ValueError("No Close column")
+    if "Close" in data.columns:
+        return data["Close"]
+    raise ValueError("No Close column")
+
+
+def _last_valid_close(series: "pd.Series") -> tuple[float | None, "date | None", bool]:
+    """Last non-NaN close, its date, and whether newer rows had NaN closes."""
+    valid = series.dropna()
+    if valid.empty:
+        return None, None, False
+    last_idx = valid.index[-1]
+    skipped_nan = valid.index[-1] != series.index[-1]
+    return float(valid.iloc[-1]), pd.Timestamp(last_idx).date(), skipped_nan
+
+
+def _check_stale(symbol: str, when: "date | None", source: str) -> None:
+    if when is None:
+        return
+    ltd = _last_trading_day()
+    if when < ltd:
+        _warn(f"{symbol}: price from {source} is dated {when}, older than the last trading day {ltd}.")
 
 
 # ─── Core Fetch Functions ────────────────────────────────────────
 
 def fetch_ticker_price(ticker: str, period: str = "5d") -> dict:
-    """Fetch the latest (or historical) price for a ticker.
+    """Fetch the latest price for a ticker.
 
-    Args:
-        ticker: Yahoo Finance symbol (e.g. "VTI", "USDMYR=X")
-        period: Time range to look back ("1d", "5d", "1mo", "6mo", ...)
+    Prefers Yahoo's live regular-market price (with its timestamp). Falls back to the
+    last non-NaN daily Close only when no live price is available, and warns on
+    stderr when the price used is older than the last trading day.
 
     Returns:
-        dict with price info or error message.
+        dict with symbol, price, currency, as_of (ISO date or None), source, error.
     """
-    result = {"symbol": ticker, "price": None, "currency": None, "error": None}
+    result = {"symbol": ticker, "price": None, "currency": None,
+              "as_of": None, "source": None, "error": None}
 
     try:
+        t = yf.Ticker(ticker)
+        try:
+            info = t.info or {}
+            if isinstance(info.get("currency"), str):
+                result["currency"] = info["currency"].upper()
+        except Exception:
+            pass
+
+        price, when = _live_quote(t)
+        if price is not None:
+            result["price"] = round(price, 4)
+            result["source"] = "regularMarketPrice"
+            if when is not None:
+                result["as_of"] = when.date().isoformat()
+                _check_stale(ticker, when.date(), "regularMarketPrice")
+            return result
+
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             data = yf.download(ticker, period=period, progress=False)
-        # Handle both regular and MultiIndex columns from Yahoo Finance
-        if isinstance(data.columns, pd.MultiIndex):
-            close_series = data.iloc[:, 0]  # First column is Close
-        elif "Close" in data.columns:
-            close_series = data["Close"]
-        else:
-            raise ValueError("No Close column")
-        
-        if not data.empty and len(close_series) > 0:
-            # Filter out NaN/NaT values (e.g., weekend holidays), then take last valid
-            valid_prices = list(close_series[~pd.isna(close_series)])
-            result["price"] = round(float(valid_prices[-1]), 4) if len(valid_prices) > 0 else None
-            # Try to extract currency from Yahoo Finance metadata
-            try:
-                info = yf.Ticker(ticker).info
-                if "currency" in info and isinstance(info.get("currency"), str):
-                    result["currency"] = info["currency"].upper()
-            except Exception:
-                pass
-        else:
-            # Fallback to regularMarketPrice for some symbols (e.g. forex)
-            t = yf.Ticker(ticker)
-            try:
-                price = float(t.info.get("regularMarketPrice", 0))
-                result["price"] = round(price, 4) if price > 0 else None
-            except Exception as e:
-                result["error"] = f"No data found: {e}"
+        if data is None or data.empty:
+            raise ValueError("No data found")
+        close, day, skipped_nan = _last_valid_close(_close_series(data))
+        if close is None:
+            raise ValueError("No valid Close values")
+        result["price"] = round(close, 4)
+        result["source"] = "daily Close"
+        result["as_of"] = day.isoformat() if day else None
+        if skipped_nan:
+            _warn(f"{ticker}: newest daily row has NaN Close; using {day} close instead.")
+        _check_stale(ticker, day, "daily Close")
 
     except Exception as e:
         result["error"] = str(e)
@@ -86,27 +154,43 @@ def fetch_forex(symbol: str, rate: float | None = None, period: str = "5d") -> d
     Args:
         symbol: Forex pair (e.g. "USDMYR=X" for MYR/USD, "EURUSD=X" for EUR/USD).
         rate: Optional — if provided, returns this fixed rate instead of fetching.
-              Useful when you already know the current rate.
-        period: Time range for historical data ("1d", "5d", "1mo", ...).
+        period: Time range for the history fallback ("1d", "5d", "1mo", ...).
 
-    Returns:
-        dict with forex info or error message. Note that Yahoo Finance uses
-        the convention `X` = base currency, so USDMYR=X gives MYR per USD.
+    Same NaN-safe order as fetch_ticker_price: live price first, then the last
+    non-NaN daily Close, with a stderr warning when the value is stale.
+    Yahoo convention: USDMYR=X gives MYR per USD.
     """
-    result: dict[str, object] = {"symbol": symbol, "error": None}
+    result: dict[str, object] = {"symbol": symbol, "rate": None, "as_of": None,
+                                 "source": None, "error": None}
 
     if rate is not None:
-        # Return fixed rate (no network call)
         result["rate"] = round(rate, 4)
+        result["source"] = "fixed"
         return result
 
     try:
-        hist = yf.Ticker(symbol).history(period=period)
-        if not hist.empty:
-            rate = float(hist["Close"].iloc[-1])
-            result["rate"] = round(rate, 4)
-        else:
+        t = yf.Ticker(symbol)
+        price, when = _live_quote(t)
+        if price is not None:
+            result["rate"] = round(price, 4)
+            result["source"] = "regularMarketPrice"
+            if when is not None:
+                result["as_of"] = when.date().isoformat()
+                _check_stale(symbol, when.date(), "regularMarketPrice")
+            return result
+
+        hist = t.history(period=period)
+        if hist is None or hist.empty:
             raise ValueError("No forex data")
+        close, day, skipped_nan = _last_valid_close(_close_series(hist))
+        if close is None:
+            raise ValueError("No valid forex Close values")
+        result["rate"] = round(close, 4)
+        result["source"] = "daily Close"
+        result["as_of"] = day.isoformat() if day else None
+        if skipped_nan:
+            _warn(f"{symbol}: newest daily row has NaN Close; using {day} close instead.")
+        _check_stale(symbol, day, "daily Close")
 
     except Exception as e:
         result["error"] = str(e)
@@ -117,10 +201,10 @@ def fetch_forex(symbol: str, rate: float | None = None, period: str = "5d") -> d
 # ─── Convenience: fetch multiple tickers at once ──────────────────
 
 def batch_fetch_csv(csv_string: str, period: str = "5d") -> dict:
-    """Fetch prices from a comma/pipe-separated string (e.g. 'VTI|VOO|QQQ').
+    """Fetch prices from a comma/pipe-separated string (e.g. 'AAPL|MSFT|SPY').
 
     Args:
-        csv_string: Symbols like "VTI|VOO|QQQ" or "VTI,VOO,QQQ"
+        csv_string: Symbols like "AAPL|MSFT|SPY" or "AAPL,MSFT,SPY"
         period: Time range ("1d", "5d", "1mo", ...).
 
     Returns:
@@ -134,7 +218,7 @@ def fetch_tickers(tickers: list[str], period: str = "5d") -> dict:
     """Fetch prices for a list of ticker symbols.
 
     Args:
-        tickers: List of Yahoo Finance symbols (e.g. ["VTI", "VOO", "USDMYR=X"])
+        tickers: List of Yahoo Finance symbols (e.g. ["AAPL", "MSFT", "USDMYR=X"])
         period: Time range ("1d", "5d", "1mo", ...).
 
     Returns:
@@ -189,7 +273,7 @@ def main():
 
         result = fetch_forex(forex_symbol, rate_arg)
         print(f"{forex_symbol}: {result['rate']}")
-        if "error" in result:
+        if result.get("error"):
             print(f"Error: {result['error']}")
 
     else:
@@ -215,7 +299,7 @@ def main():
             price = result["price"] or "N/A"
             currency = f" ({result['currency']})" if isinstance(result.get("currency"), str) and result.get("currency") else ""
             print(f"{csv_string}: ${price}{currency}")
-            if "error" in result:
+            if result.get("error"):
                 print(f"Error: {result['error']}")
 
 
