@@ -26,6 +26,7 @@ except ImportError:
 
 import pandas as pd
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 
 # ─── Helpers ─────────────────────────────────────────────────────
@@ -34,18 +35,36 @@ def _warn(msg: str) -> None:
     print(f"WARNING: {msg}", file=sys.stderr)
 
 
-def _last_trading_day(today: "date | None" = None) -> "date":
-    """Most recent weekday on or before today (UTC). Ignores exchange holidays."""
-    d = today or datetime.now(timezone.utc).date()
+_SESSION_DONE_HOUR = 17  # local hour after which a weekday session counts as closed
+
+
+def _exchange_tz(info: dict) -> "ZoneInfo":
+    try:
+        return ZoneInfo(info.get("exchangeTimezoneName") or "UTC")
+    except Exception:
+        return ZoneInfo("UTC")
+
+
+def _last_trading_day(tz: "ZoneInfo | None" = None, now: "datetime | None" = None) -> "date":
+    """Last completed weekday session in the exchange's own timezone.
+
+    A weekday counts only after its local close (approximated as 17:00 local).
+    Exchange holidays are not modelled.
+    """
+    tz = tz or ZoneInfo("UTC")
+    local = (now or datetime.now(timezone.utc)).astimezone(tz)
+    d = local.date()
+    if local.hour < _SESSION_DONE_HOUR:
+        d -= timedelta(days=1)
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     return d
 
 
-def _live_quote(t) -> tuple[float | None, "datetime | None"]:
+def _live_quote(t, info: dict | None = None) -> tuple[float | None, "datetime | None"]:
     """Latest regular-market price and its timestamp, or (None, None)."""
     try:
-        info = t.info or {}
+        info = info if info is not None else (t.info or {})
         price = info.get("regularMarketPrice")
         if price is not None and not pd.isna(price) and float(price) > 0:
             ts = info.get("regularMarketTime")
@@ -85,10 +104,10 @@ def _last_valid_close(series: "pd.Series") -> tuple[float | None, "date | None",
     return float(valid.iloc[-1]), pd.Timestamp(last_idx).date(), skipped_nan
 
 
-def _check_stale(symbol: str, when: "date | None", source: str) -> None:
+def _check_stale(symbol: str, when: "date | None", source: str, tz: "ZoneInfo | None" = None) -> None:
     if when is None:
         return
-    ltd = _last_trading_day()
+    ltd = _last_trading_day(tz)
     if when < ltd:
         _warn(f"{symbol}: price from {source} is dated {when}, older than the last trading day {ltd}.")
 
@@ -112,18 +131,20 @@ def fetch_ticker_price(ticker: str, period: str = "5d") -> dict:
         t = yf.Ticker(ticker)
         try:
             info = t.info or {}
-            if isinstance(info.get("currency"), str):
-                result["currency"] = info["currency"].upper()
         except Exception:
-            pass
+            info = {}
+        if isinstance(info.get("currency"), str):
+            result["currency"] = info["currency"].upper()
+        tz = _exchange_tz(info)
 
-        price, when = _live_quote(t)
+        price, when = _live_quote(t, info)
         if price is not None:
             result["price"] = round(price, 4)
             result["source"] = "regularMarketPrice"
             if when is not None:
-                result["as_of"] = when.date().isoformat()
-                _check_stale(ticker, when.date(), "regularMarketPrice")
+                day = when.astimezone(tz).date()
+                result["as_of"] = day.isoformat()
+                _check_stale(ticker, day, "regularMarketPrice", tz)
             return result
 
         import warnings
@@ -140,7 +161,7 @@ def fetch_ticker_price(ticker: str, period: str = "5d") -> dict:
         result["as_of"] = day.isoformat() if day else None
         if skipped_nan:
             _warn(f"{ticker}: newest daily row has NaN Close; using {day} close instead.")
-        _check_stale(ticker, day, "daily Close")
+        _check_stale(ticker, day, "daily Close", tz)
 
     except Exception as e:
         result["error"] = str(e)
@@ -170,13 +191,19 @@ def fetch_forex(symbol: str, rate: float | None = None, period: str = "5d") -> d
 
     try:
         t = yf.Ticker(symbol)
-        price, when = _live_quote(t)
+        try:
+            info = t.info or {}
+        except Exception:
+            info = {}
+        tz = _exchange_tz(info)
+        price, when = _live_quote(t, info)
         if price is not None:
             result["rate"] = round(price, 4)
             result["source"] = "regularMarketPrice"
             if when is not None:
-                result["as_of"] = when.date().isoformat()
-                _check_stale(symbol, when.date(), "regularMarketPrice")
+                day = when.astimezone(tz).date()
+                result["as_of"] = day.isoformat()
+                _check_stale(symbol, day, "regularMarketPrice", tz)
             return result
 
         hist = t.history(period=period)
@@ -190,7 +217,7 @@ def fetch_forex(symbol: str, rate: float | None = None, period: str = "5d") -> d
         result["as_of"] = day.isoformat() if day else None
         if skipped_nan:
             _warn(f"{symbol}: newest daily row has NaN Close; using {day} close instead.")
-        _check_stale(symbol, day, "daily Close")
+        _check_stale(symbol, day, "daily Close", tz)
 
     except Exception as e:
         result["error"] = str(e)
