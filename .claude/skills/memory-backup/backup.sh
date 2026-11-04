@@ -163,14 +163,14 @@ sync_path() {
       remove_path "$dest_path"
     fi
     mkdir -p "$dest_path"
-    rsync -a --delete "$source_path/" "$dest_path/"
+    rsync -ac --delete "$source_path/" "$dest_path/"
     printf 'Synced %s\n' "$relative_path"
   elif [[ -f "$source_path" ]]; then
     if [[ -d "$dest_path" ]]; then
       remove_path "$dest_path"
     fi
     mkdir -p "$(dirname "$dest_path")"
-    rsync -a "$source_path" "$dest_path"
+    rsync -ac "$source_path" "$dest_path"
     printf 'Synced %s\n' "$relative_path"
   else
     if [[ -e "$dest_path" || -L "$dest_path" ]]; then
@@ -180,18 +180,66 @@ sync_path() {
   fi
 }
 
-pull_latest() {
-  printf 'Pulling latest backup repo...\n'
-  git -C "$BACKUP_DIR_REAL" pull --ff-only
-
+check_source_before_pull() {
   if git -C "$SOURCE_DIR_REAL" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    local local_changes
-    local_changes="$(git -C "$SOURCE_DIR_REAL" status --porcelain -- CLAUDE.md TASKS.md memory)"
-    if [[ -n "$local_changes" ]]; then
-      printf 'Local memory files have changes; pull skipped to avoid overwrite:\n%s\n' "$local_changes" >&2
+    local staged_changes
+    staged_changes="$(git -C "$SOURCE_DIR_REAL" diff --cached --name-only -- CLAUDE.md TASKS.md memory)"
+    if [[ -n "$staged_changes" ]]; then
+      printf 'Source memory has staged changes; pull refused to preserve the index:\n%s\n' "$staged_changes" >&2
       exit 1
     fi
+    # An earlier restore can leave source Git HEAD behind the saved content.
+    # Unstaged content is safe only if the byte-level check below matches it.
   fi
+
+  # Git status does not report ignored memory files. Compare actual content
+  # with the current backup tip BEFORE updating that tip or copying anything.
+  python3 - "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" <<'PY'
+import hashlib
+import os
+from pathlib import Path
+import sys
+
+source, backup = map(Path, sys.argv[1:])
+paths = ('CLAUDE.md', 'TASKS.md', 'memory')
+if not any(os.path.lexists(source / name) for name in paths):
+    # A new workspace with no memory yet is a restore, not an overwrite.
+    sys.exit(0)
+
+def snapshot(root):
+    result = {}
+    def visit(path):
+        key = str(path.relative_to(root))
+        if path.is_symlink():
+            result[key] = ('link', os.readlink(path))
+        elif path.is_dir():
+            result[key] = ('directory',)
+            for child in path.iterdir():
+                visit(child)
+        elif path.is_file():
+            result[key] = ('file', hashlib.sha256(path.read_bytes()).hexdigest())
+        elif os.path.lexists(path):
+            raise RuntimeError(f'Unsupported memory path: {path}')
+    for name in paths:
+        visit(root / name)
+    return result
+
+local, saved = snapshot(source), snapshot(backup)
+changed = sorted(key for key in local.keys() | saved.keys()
+                 if local.get(key) != saved.get(key))
+if changed:
+    print('Source memory differs from the current backup; pull refused to avoid overwrite.', file=sys.stderr)
+    for name in changed:
+        print(f'  {name}', file=sys.stderr)
+    print('Back up local changes first, or explicitly reconcile both versions. Git-ignored files are protected too.', file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
+pull_latest() {
+  check_source_before_pull
+  printf 'Pulling latest backup repo...\n'
+  git -C "$BACKUP_DIR_REAL" pull --ff-only
 
   sync_path "$BACKUP_DIR_REAL" "$SOURCE_DIR_REAL" "CLAUDE.md"
   sync_path "$BACKUP_DIR_REAL" "$SOURCE_DIR_REAL" "TASKS.md"
@@ -213,6 +261,21 @@ if [[ "$MODE" == "dry-run" ]]; then
   exit 0
 fi
 
+check_push_history() {
+  local upstream
+  if ! upstream="$(git -C "$BACKUP_DIR_REAL" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)"; then
+    printf 'Backup branch has no upstream. Configure its remote branch before backing up.\n' >&2
+    exit 1
+  fi
+  printf 'Checking remote backup history...\n'
+  git -C "$BACKUP_DIR_REAL" fetch
+  if ! git -C "$BACKUP_DIR_REAL" merge-base --is-ancestor "$upstream" HEAD; then
+    printf 'Remote backup contains commits not in the local backup. No memory files were copied or committed.\n' >&2
+    printf 'Use --pull if only the remote advanced and source memory matches the saved local copy. Otherwise reconcile both histories first; do not force-push.\n' >&2
+    exit 1
+  fi
+}
+
 if [[ "$MODE" == "pull" || "$MODE" == "sync" ]]; then
   pull_latest
 fi
@@ -221,6 +284,8 @@ if [[ "$MODE" == "pull" ]]; then
   exit 0
 fi
 
+check_push_history
+
 sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "CLAUDE.md"
 sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "TASKS.md"
 sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "memory"
@@ -228,19 +293,19 @@ sync_path "$SOURCE_DIR_REAL" "$BACKUP_DIR_REAL" "memory"
 git -C "$BACKUP_DIR_REAL" add -A -- CLAUDE.md TASKS.md memory
 
 if git -C "$BACKUP_DIR_REAL" diff --cached --quiet -- CLAUDE.md TASKS.md memory; then
-  printf 'No backup changes to commit.\n'
-  exit 0
+  printf 'No backup changes to commit; checking for pending pushes.\n'
+else
+  SOURCE_REV="no-git"
+  if git -C "$SOURCE_DIR_REAL" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    SOURCE_REV="$(git -C "$SOURCE_DIR_REAL" rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
+  fi
+
+  TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S %z')"
+  COMMIT_MSG="memory-backup: $TIMESTAMP from $SOURCE_REV"
+  git -C "$BACKUP_DIR_REAL" commit -m "$COMMIT_MSG"
 fi
 
-SOURCE_REV="no-git"
-if git -C "$SOURCE_DIR_REAL" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  SOURCE_REV="$(git -C "$SOURCE_DIR_REAL" rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
-fi
-
-TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S %z')"
-COMMIT_MSG="memory-backup: $TIMESTAMP from $SOURCE_REV"
-
-git -C "$BACKUP_DIR_REAL" commit -m "$COMMIT_MSG"
+# Always retry publication, even if a previous run already made the commit.
 git -C "$BACKUP_DIR_REAL" push
 
 printf 'Backup complete.\n'

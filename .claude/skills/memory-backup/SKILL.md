@@ -47,13 +47,18 @@ The script is the only thing that should perform the backup. Do not manually rec
 
 - Loads `MEMORY_BACKUP_DIR` from the environment or workspace `.env`
 - Verifies the destination is a Git repo separate from the source workspace
-- Push mode: mirrors only `CLAUDE.md`, `TASKS.md`, and `memory/` into the backup repo, commits only if changed, then pushes
-- Pull mode: runs `git pull --ff-only` in the backup repo, then copies those files into the workspace
-- Sync mode: pull first, then push
-- Pull/sync refuse to overwrite local changes under `CLAUDE.md`, `TASKS.md`, or `memory/`
+- Push mode: fetches the upstream and refuses remote-ahead or diverged history before copying files. If safe, mirrors only `CLAUDE.md`, `TASKS.md`, and `memory/`, commits changes, then pushes.
+- Push retries pending commits even if there are no new file changes. A previous failed push must not be reported as complete just because the files match.
+- Pull mode: refuses staged source changes and checks actual file content against the current backup copy before running `git pull --ff-only`, then restores those files. Unstaged content already saved in the backup is safe even if the workspace's Git HEAD is older.
+- Sync mode: guarded pull first, then guarded push.
+- Pull/sync protect Git-ignored memory too. If existing workspace content differs from the current backup, they stop rather than guess which version to keep. An empty workspace can be restored.
+- Copies use checksums, not only file size and modification time, so same-size edits with matching timestamps are not skipped.
+- Remote divergence is not merged or rebased automatically. Preserve both histories and workspace files, inspect the changes, and reconcile explicitly. Never force-push to resolve it.
 
 ## Notes
 
 - The backup repo keeps the same relative structure for easy restore.
-- This command does not back up other files, even if they exist in the workspace.
+- This command does not back up other files, even if they exist in the workspace. Skill code and presentation files are not included.
+- Git status alone is not a valid clean check when memory paths are ignored. Check actual content before restoring or reconciling.
+- Run isolated regression tests with `python3 .claude/skills/memory-backup/test_backup.py`. Tests use temporary repositories and a local bare remote; they must not access the real backup or GitHub.
 - If `TASKS.md` or `memory/` do not exist, the script skips them cleanly.
